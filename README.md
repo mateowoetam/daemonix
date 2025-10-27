@@ -21,7 +21,6 @@
 - Fedora Atomic Base with Selinux activated
 - Developpement Stuff (podman, docker, vscode, ghostty ...)
 - Install and export any linux binary with native [distrobox](https://distrobox.it/)
-- Native Steam and Heroic gaming tools
 - GUI stores for flathub (bazaar) and nix (nix-software-center)
 
 ## Advantages over classic Fedora
