@@ -20,7 +20,7 @@
 - Obtain more than 120 000 packages with [nixpkgs](https://search.nixos.org/packages)
 - Fedora Atomic Base with Selinux activated
 - Developpement Stuff (podman, docker, vscode, ghostty ...)
-- Install and export any linux binary with native [distrobox](https://distrobox.it/)
+- Install and use any linux binary with native [distrobox](https://distrobox.it/)
 - Manage apps with [discover](https://apps.kde.org/fr/discover/) and [nix-software-center](https://github.com/snowfallorg/nix-software-center)
 
 ## Advantages over classic Fedora
