@@ -21,7 +21,7 @@
 - Fedora Atomic Base with Selinux activated
 - Developpement Stuff (podman, docker, vscode, ghostty ...)
 - Install and export any linux binary with native [distrobox](https://distrobox.it/)
-- Manage your apps with [discover](https://apps.kde.org/fr/discover/) and [nix-software-center](https://github.com/snowfallorg/nix-software-center)
+- Manage apps with [discover](https://apps.kde.org/fr/discover/) and [nix-software-center](https://github.com/snowfallorg/nix-software-center)
 
 ## Advantages over classic Fedora
 
