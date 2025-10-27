@@ -21,7 +21,7 @@
 - Fedora Atomic Base with Selinux activated
 - Developpement Stuff (podman, docker, vscode, ghostty ...)
 - Install and export any linux binary with native [distrobox](https://distrobox.it/)
-- GUI stores for flathub (bazaar) and nix (nix-software-center)
+- [nix-software-center](https://github.com/snowfallorg/nix-software-center) included
 
 ## Advantages over classic Fedora
 
