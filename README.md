@@ -10,6 +10,7 @@
    - Universal Blue supercharged by Nix - </i>
 </p>
 
+[![Build container image](https://github.com/DXC-0/daemonix/actions/workflows/build.yml/badge.svg)](https://github.com/DXC-0/daemonix/actions/workflows/build.yml)
 
 ## 📖 Description
 
