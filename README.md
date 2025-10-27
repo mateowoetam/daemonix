@@ -1,3 +1,6 @@
+
+[![Build container image](https://github.com/DXC-0/daemonix/actions/workflows/build.yml/badge.svg)](https://github.com/DXC-0/daemonix/actions/workflows/build.yml)
+
 <h1 align="center">
     <img align="center" width=150 src="icon.png" />
     <br><br>
@@ -9,8 +12,6 @@
 <p align="center">
    - Universal Blue supercharged by Nix - </i>
 </p>
-
-[![Build container image](https://github.com/DXC-0/daemonix/actions/workflows/build.yml/badge.svg)](https://github.com/DXC-0/daemonix/actions/workflows/build.yml)
 
 ## 📖 Description
 
