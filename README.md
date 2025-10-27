@@ -22,6 +22,7 @@
 - Developpement Stuff (podman, docker, vscode, ghostty ...)
 - Install and export any linux binary with native [distrobox](https://distrobox.it/)
 - [nix-software-center](https://github.com/snowfallorg/nix-software-center) included
+- [discover](https://apps.kde.org/fr/discover/) included
 
 ## Advantages over classic Fedora
 
