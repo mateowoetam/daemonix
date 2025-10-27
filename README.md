@@ -26,7 +26,7 @@
 ## Advantages over classic Fedora
 
 - Isolated applications with [flatpak](https://docs.flatpak.org/en/latest/basic-concepts.html)
-- [Cloud-Native](https://en.wikipedia.org/wiki/Cloud-native_computing) immutable distro powered by [bootc](https://github.com/bootc-dev/bootc)
+- [Cloud-Native](https://en.wikipedia.org/wiki/Cloud-native_computing) immutable spin powered by [bootc](https://github.com/bootc-dev/bootc)
 - Rock solid stable with fresh packets
 - Latest Nvidia Drivers
 - Easy rollback and rebase
