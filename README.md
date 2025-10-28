@@ -65,3 +65,8 @@ Documentation : [Nix-Determinate](https://docs.determinate.systems/determinate-n
 - Thanks to [#Fedora](https://fedoraproject.org/fr/) and the [#atomic-project](https://fedoramagazine.org/introducing-fedora-atomic-desktops/) upstream
 - If you have time, check out [#Bluefin](https://projectbluefin.io/) or [#Bazzite](https://bazzite.gg/) and support them.
 
+
+-----
+
+[![BCO-8b140fdc-519b-4ce6-af24-1c140b4676ed.png](https://i.postimg.cc/GhcNR8XJ/BCO-8b140fdc-519b-4ce6-af24-1c140b4676ed.png)](https://postimg.cc/QVySktGH)
+
