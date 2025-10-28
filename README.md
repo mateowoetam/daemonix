@@ -67,6 +67,3 @@ Documentation : [Nix-Determinate](https://docs.determinate.systems/determinate-n
 
 
 -----
-
-[![BCO-8b140fdc-519b-4ce6-af24-1c140b4676ed.png](https://i.postimg.cc/GhcNR8XJ/BCO-8b140fdc-519b-4ce6-af24-1c140b4676ed.png)](https://postimg.cc/QVySktGH)
-
