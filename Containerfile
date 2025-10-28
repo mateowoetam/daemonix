@@ -43,11 +43,11 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
 # NVIDIA DRIVERS
 
-COPY --from=ghcr.io/ublue-os/akmods-nvidia-open:main-42 / /tmp/akmods-nvidia
+COPY --from=ghcr.io/ublue-os/akmods-nvidia-open:main-43 / /tmp/akmods-nvidia
 
 RUN dnf install -y \
-    /tmp/akmods-nvidia/rpms/kmods/kmod-nvidia-6.17.4-200.fc42.x86_64-580.95.05-1.fc42.x86_64.rpm \
-    /tmp/akmods-nvidia/rpms/ublue-os/ublue-os-nvidia-addons-0.13-1.fc42.noarch.rpm \
+    /tmp/akmods-nvidia/rpms/kmods/kmod-nvidia-*.rpm \
+    /tmp/akmods-nvidia/rpms/ublue-os/ublue-os-nvidia-addons-*.rpm \
     nvidia-driver \
     nvidia-driver-libs \
     nvidia-settings && \
