@@ -50,7 +50,9 @@ To use any additionnal feature use :
 daemonix-helper
 ```
 
-Add nixpkgs unstable channel : 
+[![Copie-d-ecran-20251029-080825.png](https://i.postimg.cc/NjLZfJHy/Copie-d-ecran-20251029-080825.png)](https://postimg.cc/JsVppQKm)
+
+Manually add nixpkgs unstable channel : 
 
 ```
 nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs
