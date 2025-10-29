@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Removed RPMS
+
+RM_PACKAGES=(
+  firefox
+)
+
+dnf remove -y "${RM_PACKAGES[@]}"
+
+# Installed RPMS
+
 PACKAGES=(
   distrobox
   fastfetch
@@ -17,6 +27,7 @@ PACKAGES=(
   docker-compose-plugin
   code
   ghostty
+  librewolf
 )
 
 dnf install --setopt=install_weak_deps=False -y "${PACKAGES[@]}"
