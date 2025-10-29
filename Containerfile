@@ -27,8 +27,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
 
     install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
-    install -Dm755 /ctx/install-com-flatpak.sh /usr/bin/com-tools && \
-    install -Dm755 /ctx/install-gaming-extra.sh /usr/bin/gaming-extra && \
     install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
 
