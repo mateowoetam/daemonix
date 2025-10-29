@@ -44,7 +44,7 @@ Rebase from any Fedora Atomic based distro :
 sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/DXC-0/daemonix:latest
 ```
 
-To enable any additionnal feature use : 
+To use any additionnal feature use : 
 
 ```
 daemonix-helper
