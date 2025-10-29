@@ -4,6 +4,7 @@
 
 RM_PACKAGES=(
   firefox
+  konsole
 )
 
 dnf remove -y "${RM_PACKAGES[@]}"
