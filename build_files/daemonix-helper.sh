@@ -7,7 +7,8 @@ declare -A scripts=(
   ["4"]="update_nix"
   ["5"]="enable_unstable"
   ["6"]="enable_unfree"
-  ["7"]="nix_garbage"
+  ["7"]="nix_list"
+  ["8"]="nix_garbage"
 )
 
 dev_mode() {
@@ -49,6 +50,12 @@ enable_unfree() {
   sleep 3
 }
 
+nix_list() {
+  nix profile list
+  echo "installed packages"
+  read
+}
+
 nix_garbage() {
   nix-collect-garbage -d
   echo "old nix generation deleted"
@@ -81,7 +88,8 @@ while true; do
   echo "4) Update nix channels"
   echo "5) Enable nixpkgs unstable"
   echo "6) Enable nix unfree packages"
-  echo "7) Run nix garbage"
+  echo "7) List installed nix packages"
+  echo "8) Run nix garbage"
   echo
   echo
   read -rp "Select an option: " choice
