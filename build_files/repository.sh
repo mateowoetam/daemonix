@@ -19,4 +19,4 @@ echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com
 
 # LIBREWOLF
 
-dnf config-manager --add-repo https://repo.librewolf.net/librewolf.repo
+dnf config-manager addrepo --from-repofile=https://repo.librewolf.net/librewolf.repo
