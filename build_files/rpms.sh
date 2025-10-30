@@ -14,6 +14,8 @@ RM_PACKAGES=(
   kde-connect
   kwalletmanager
   filelight
+  kdebugsettings
+  fcitx5
 )
 
 dnf remove -y "${RM_PACKAGES[@]}"
