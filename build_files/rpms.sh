@@ -5,6 +5,15 @@
 RM_PACKAGES=(
   firefox
   konsole
+  kate
+  htop
+  nvtop
+  kontact
+  kfind
+  krfb
+  kcharselect
+  kde-connect
+  kwalletmanager
 )
 
 dnf remove -y "${RM_PACKAGES[@]}"
@@ -27,6 +36,7 @@ PACKAGES=(
   docker-buildx-plugin
   docker-compose-plugin
   code
+  btop
   ghostty
   librewolf
 )
