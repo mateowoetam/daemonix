@@ -8,12 +8,12 @@ RM_PACKAGES=(
   kate
   htop
   nvtop
-  kontact
   kfind
   krfb
   kcharselect
   kde-connect
   kwalletmanager
+  filelight
 )
 
 dnf remove -y "${RM_PACKAGES[@]}"

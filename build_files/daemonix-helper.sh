@@ -79,7 +79,6 @@ while true; do
   echo "--> Search packages : https://search.nixos.org/packages"
   echo "--> Documentation : https://wiki.nixos.org/wiki/NixOS_Wiki"
   echo
-  echo
   echo "AVAILABLE OPTIONS :"
   echo
   echo "1) Activate Developer Mode"
