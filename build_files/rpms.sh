@@ -27,7 +27,7 @@ PACKAGES=(
   fastfetch
   libavcodec-freeworld
   mpv
-  #steam
+  steam
   heroic-games-launcher-bin
   gamescope
   gamemode
