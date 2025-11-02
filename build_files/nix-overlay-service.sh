@@ -7,6 +7,10 @@ mkdir -p /var/lib/nix-store
 mkdir -p /var/cache/nix-store      
 mkdir -p /nix
 
+# Module
+
+echo overlay > /etc/modules-load.d/overlay.conf
+
 # Create systemd service
 
 cat << 'EOF' > /etc/systemd/system/nix-overlay.service
