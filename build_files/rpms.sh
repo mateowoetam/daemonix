@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Avoid conflicts
-
-dnf distro-sync -y
-
 # Removed RPMS
 
 RM_PACKAGES=(
