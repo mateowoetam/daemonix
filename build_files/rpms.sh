@@ -25,6 +25,7 @@ dnf remove -y "${RM_PACKAGES[@]}"
 PACKAGES=(
   distrobox
   fastfetch
+  firejail
   libavcodec-freeworld
   mpv
   steam
