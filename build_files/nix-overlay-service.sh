@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Preparation
-
-mkdir -p /usr/share/nix-store      
-mkdir -p /var/lib/nix-store        
-mkdir -p /var/cache/nix-store      
-mkdir -p /nix
-
 # Module
 
 echo overlay > /etc/modules-load.d/overlay.conf
