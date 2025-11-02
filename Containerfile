@@ -24,7 +24,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -m755 /ctx/services.sh /tmp/services.sh && \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
-    install -m755 /ctx/hardening.sh /tmp/hardening.sh && \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
 
     install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
@@ -37,7 +36,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
     bash /tmp/services.sh && \
-    bash /tmp/hardening.sh && \
     bash /tmp/custom.sh
 
 
