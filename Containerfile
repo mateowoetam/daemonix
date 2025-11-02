@@ -25,19 +25,16 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
-    install -m755 /ctx/create-update-checker.sh /tmp/create-update-checker.sh && \
 
     install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
     install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
-    install -Dm755 /ctx/update-checker.sh /usr/bin/update-checker.sh && \
 
     bash /tmp/repository.sh && \
     bash /tmp/rpms.sh && \
     bash /tmp/extra-rpms.sh && \
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
-    bash /tmp/create-update-checker.sh && \
     bash /tmp/services.sh && \
     bash /tmp/custom.sh
 
