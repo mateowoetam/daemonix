@@ -2,27 +2,12 @@
 
 ### General Hardening
 
-
-# Firejail 
+# Firejail for librewolf
 
 echo 'export PATH="/usr/local/bin:$PATH"' > /etc/profile.d/firejail-path.sh
 chmod +x /etc/profile.d/firejail-path.sh
 
-cat << 'EOF' | sudo tee /etc/systemd/system/firecfg.service > /dev/null
-[Unit]
-Description=Run firecfg at boot
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/firecfg
-RemainAfterExit=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl enable firecfg.service
+sed -i 's|^Exec=.*|Exec=firejail /usr/bin/librewolf|' /usr/share/applications/librewolf.desktop
 
 # Remove undesired suid binaries
 
