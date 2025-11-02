@@ -14,26 +14,6 @@ sed -i 's|^Exec=.*|Exec=firejail /usr/bin/librewolf|' /usr/share/applications/li
 chmod 000 /usr/bin/pkexec
 chmod 000 /usr/bin/su
 
-# Light Flatpak enforcing 
-
-apps=$(flatpak list --app --columns=application)
-
-for app in $apps; do
-    flatpak override --system \
-        --filesystem=xdg-download:ro \
-        --filesystem=xdg-documents:ro \
-        --filesystem=xdg-pictures:ro \
-        --filesystem=xdg-videos:ro \
-        --no-device=video \
-        --no-device=printer \
-        --nofilesystem=host-os \
-        --no-talk-name=org.freedesktop.login1 \
-        --no-talk-name=org.freedesktop.hostname1 \
-        --no-talk-name=org.freedesktop.portal.RemoteDesktop \
-        --no-filesystem=/usr/share/flatpak/extensions \
-        "$app"
-done
-
 # Changing dns resolver 
 
 #ln -sf /run/NetworkManager/resolv.conf /etc/resolv.conf
