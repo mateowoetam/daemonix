@@ -37,7 +37,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     bash /tmp/extra-rpms.sh && \
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
-    bash /tpm/create-update-checker.sh && \
+    bash /tmp/create-update-checker.sh && \
     bash /tmp/services.sh && \
     bash /tmp/custom.sh
 
