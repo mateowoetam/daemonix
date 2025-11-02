@@ -33,7 +33,7 @@ PACKAGES=(
   smb4k
   libavcodec-freeworld
   mpv
-  steam
+  #steam
   heroic-games-launcher-bin
   gamescope
   gamemode
