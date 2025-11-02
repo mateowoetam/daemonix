@@ -28,7 +28,7 @@ PACKAGES=(
   libavcodec-freeworld
   mpv
   #steam
-  heroic-games-launcher-bin
+  bottles
   gamescope
   gamemode
   VK_hdr_layer
