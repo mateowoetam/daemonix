@@ -45,4 +45,4 @@ PACKAGES=(
   librewolf
 )
 
-dnf install --setopt=install_weak_deps=False --exclude=mesa-vulkan-drivers.i686 -y "${PACKAGES[@]}"
+dnf install --setopt=install_weak_deps=False -y "${PACKAGES[@]}"
