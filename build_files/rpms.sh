@@ -16,7 +16,7 @@ RM_PACKAGES=(
   filelight
   kdebugsettings
   fcitx5
-  mesa-vulkan-drivers.i686
+  mesa-vulkan-drivers
 )
 
 dnf remove -y "${RM_PACKAGES[@]}"
