@@ -28,7 +28,6 @@ PACKAGES=(
   fastfetch
   libavcodec-freeworld
   mpv
-  steam
   gamescope
   gamemode
   VK_hdr_layer
