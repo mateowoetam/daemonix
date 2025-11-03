@@ -11,7 +11,6 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 
 # COPR
 dnf -y copr enable scottames/ghostty
-dnf -y copr enable atim/heroic-games-launcher
 
 # MICROSOFT
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
