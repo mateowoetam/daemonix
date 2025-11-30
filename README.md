@@ -36,7 +36,7 @@
 
 ## Installation
 
-> **Note** : This image is designed for my personnal usage, contact me if you want to adapt.  
+> **Note** : This image is experimental and build for testing pruposes, contact me if you want to adapt.  
 
 Rebase from any Fedora Atomic based distro :
 
