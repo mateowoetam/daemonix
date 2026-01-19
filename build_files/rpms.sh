@@ -28,7 +28,6 @@ PACKAGES=(
   gamescope
   gamemode
   VK_hdr_layer
-  code
   btop
   alacritty
   librewolf
