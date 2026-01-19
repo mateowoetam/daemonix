@@ -16,10 +16,9 @@
 ## 📖 Description
 
 - Custom Image, based on [ublue-os/kinoite-main](https://github.com/ublue-os/main)
-- [Nix package manager](https://nixos.org/) included by default (nix-shell, déclarative configs...)
+- [Nix package manager](https://nixos.org/) included by default (nix-shell, declarative configs...)
 - Obtain more than 120 000 packages with [nixpkgs](https://search.nixos.org/packages)
 - Fedora Atomic Base with Selinux activated
-- Developpement Stuff (podman, docker, vscode, ghostty ...)
 - Install and use any linux binary with native [distrobox](https://distrobox.it/)
 - Manage apps with [discover](https://apps.kde.org/fr/discover/) and [nix-software-center](https://github.com/snowfallorg/nix-software-center)
 

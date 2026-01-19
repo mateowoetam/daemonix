@@ -4,8 +4,6 @@
 
 RM_PACKAGES=(
   firefox
-  konsole
-  kate
   htop
   nvtop
   kfind
@@ -30,14 +28,9 @@ PACKAGES=(
   gamescope
   gamemode
   VK_hdr_layer
-  docker-ce
-  docker-ce-cli
-  containerd.io
-  docker-buildx-plugin
-  docker-compose-plugin
   code
   btop
-  ghostty
+  alacritty
   librewolf
 )
 
