@@ -20,8 +20,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
     install -m755 /ctx/repository.sh /tmp/repository.sh && \
     install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
-    #install -m755 /ctx/extra-rpms.sh /tmp/extra-rpms.sh && \
-
     install -m755 /ctx/services.sh /tmp/services.sh && \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
@@ -34,8 +32,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
     bash /tmp/repository.sh && \
     bash /tmp/rpms.sh && \
-    #bash /tmp/extra-rpms.sh && \
-
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
     bash /tmp/services.sh && \
@@ -63,11 +59,11 @@ RUN bootc container lint
 
 LABEL org.opencontainers.image.title="daemonix" \
       org.opencontainers.image.version="latest.20251025" \
-      org.opencontainers.image.source="https://github.com/DXC-0/daemonix/blob/main/Containerfile" \
+      org.opencontainers.image.source="https://github.com/mateowoetam/daemonix/blob/main/Containerfile" \
       org.opencontainers.image.revision="c7d20d37c17a23bc97c7e2aa22adfe329626302f" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.vendor="DXC-0" \
-      org.opencontainers.image.url="https://github.com/DXC-0/daemonix" \
-      org.opencontainers.image.documentation="https://raw.githubusercontent.com/DXC-0/daemonix/refs/heads/main/README.md" \
+      org.opencontainers.image.vendor="mateowoetam" \
+      org.opencontainers.image.url="https://github.com/mateowoetam/daemonix" \
+      org.opencontainers.image.documentation="https://raw.githubusercontent.com/mateowoetam/daemonix/refs/heads/main/README.md" \
       org.opencontainers.image.description="Universal Blue Supercharged by Nix" \
       org.opencontainers.image.created="2025-10-25T23:21:35Z"
