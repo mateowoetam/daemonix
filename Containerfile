@@ -34,7 +34,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
     bash /tmp/repository.sh && \
     bash /tmp/rpms.sh && \
-    bash /tmp/extra-rpms.sh && \
+    #bash /tmp/extra-rpms.sh && \
+
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
     bash /tmp/services.sh && \
