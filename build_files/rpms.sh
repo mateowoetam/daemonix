@@ -21,14 +21,14 @@ dnf remove -y "${RM_PACKAGES[@]}"
 # Installed RPMS
 
 PACKAGES=(
+  fish
   distrobox
   fastfetch
   libavcodec-freeworld
-  mpv
+  vlc
   gamescope
   gamemode
   VK_hdr_layer
-  btop
   alacritty
   librewolf
 )
