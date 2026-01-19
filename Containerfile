@@ -20,7 +20,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
     install -m755 /ctx/repository.sh /tmp/repository.sh && \
     install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
-    install -m755 /ctx/extra-rpms.sh /tmp/extra-rpms.sh && \
+    #install -m755 /ctx/extra-rpms.sh /tmp/extra-rpms.sh && \
+
     install -m755 /ctx/services.sh /tmp/services.sh && \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
