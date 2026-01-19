@@ -40,7 +40,7 @@
 Rebase from any Fedora Atomic based distro :
 
 ```
-sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/DXC-0/daemonix:latest
+sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/mateowoetam/daemonix:latest
 ```
 
 To use any additionnal feature use : 
