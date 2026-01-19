@@ -11,7 +11,6 @@ RM_PACKAGES=(
   kcharselect
   kde-connect
   kwalletmanager
-  filelight
   kdebugsettings
   fcitx5
 )
