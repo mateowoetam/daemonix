@@ -6,7 +6,9 @@ flatpak -y install flathub \
 com.ranfdev.DistroShelf \
 io.github.dvlv.boxbuddyrs \
 org.virt_manager.virt-manager \
-./hytale-launcher-latest.flatpak
+hytale-launcher-latest.flatpak
+
+rm -rf hytale-launcher-latest.flatpak
 
 flatpak -y remove flathub \
 org.fkoehler.KTailctl \
