@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # URL of the .flatpak file
 Hytale_URL="https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak"

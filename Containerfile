@@ -33,8 +33,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
 
     bash /tmp/repository.sh && \
-    bash /tmp/default-flatpak-clean.sh && \
     bash /tmp/rpms.sh && \
+    bash /tmp/default-flatpak-clean.sh && \
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
     bash /tmp/services.sh && \
