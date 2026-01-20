@@ -25,7 +25,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
     install -m755 /ctx/system-config.sh /tmp/system-config.sh && \
-    install -m755 /ctx/security.sh /tmp/security.sh && \
     install -m755 /ctx/post-install-cleanup.sh /tmp/post-install-cleanup.sh && \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
 
@@ -40,7 +39,6 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sh /tmp/nix.sh && \
     sh /tmp/system-config.sh && \
     sh /tmp/services.sh && \
-    sh /tmp/security.sh && \
     sh /tmp/post-install-cleanup.sh && \
     sh /tmp/custom.sh
 
