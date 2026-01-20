@@ -1,35 +1,34 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
-# Removed RPMS
+# Removed RPMs
+set -- \
+    firefox \
+    htop \
+    nvtop \
+    kfind \
+    krfb \
+    kcharselect \
+    kde-connect \
+    kwalletmanager \
+    kdebugsettings \
+    fcitx5
 
-RM_PACKAGES=(
-  firefox
-  htop
-  nvtop
-  kfind
-  krfb
-  kcharselect
-  kde-connect
-  kwalletmanager
-  kdebugsettings
-  fcitx5
-)
+dnf remove -y "$@"
 
-dnf remove -y "${RM_PACKAGES[@]}"
+# Installed RPMs
+set -- \
+    opendoas \
+    dash \
+    fish \
+    distrobox \
+    fastfetch \
+    libavcodec-freeworld \
+    vlc \
+    gamescope \
+    gamemode \
+    VK_hdr_layer \
+    alacritty \
+    librewolf
 
-# Installed RPMS
-
-PACKAGES=(
-  fish
-  distrobox
-  fastfetch
-  libavcodec-freeworld
-  vlc
-  gamescope
-  gamemode
-  VK_hdr_layer
-  alacritty
-  librewolf
-)
-
-dnf install --setopt=install_weak_deps=False -y "${PACKAGES[@]}"
+dnf install --setopt=install_weak_deps=False -y "$@"

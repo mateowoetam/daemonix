@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # custom name
 sed -i 's/^NAME=.*/NAME="Fedora (Daemonix)"/' /etc/os-release

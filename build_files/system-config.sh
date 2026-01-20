@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+# ---- doas configuration ----
+cat > /etc/doas.conf <<'EOF'
+permit setenv { SSH_AUTH_SOCK TERMINFO TERMINFO_DIRS } :wheel
+permit nopass keepenv root
+EOF
+
+# Protect doas from removal
+rm -f /etc/dnf/protected.d/sudo.conf
+echo doas > /etc/dnf/protected.d/doas.conf
+
+# Replace sudo with doas
+ln -sf /bin/doas /bin/sudo
+
+# dash as /bin/sh (intentional override)
+ln -sf /bin/dash /bin/sh
+
+# ---- profile.d scripts ----
+BASE_URL="https://codeberg.org/mateowoetam/fedoramods/raw/branch/main/etc/profile.d"
+
+echo "Installing profile scripts into /etc/profile.d..."
+
+curl -fsSL "$BASE_URL/lang.sh" -o /etc/profile.d/lang.sh
+curl -fsSL "$BASE_URL/PackageKit.sh" -o /etc/profile.d/PackageKit.sh
+
+chmod 644 /etc/profile.d/lang.sh /etc/profile.d/PackageKit.sh
+
+echo "System configuration complete."

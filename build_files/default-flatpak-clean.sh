@@ -1,17 +1,19 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -e
 
-apps=(
-  org.fkoehler.KTailctl
-  org.gnome.DejaDup
-  org.kde.haruna
-  org.mozilla.firefox
-)
+apps='
+org.fkoehler.KTailctl
+org.gnome.DejaDup
+org.kde.haruna
+org.mozilla.firefox
+'
 
 installed=$(flatpak list --app --columns=application)
 
-for app in "${apps[@]}"; do
-  if echo "$installed" | grep -qx "$app"; then
-    flatpak -y uninstall "$app"
-  fi
+echo "$apps" | while IFS= read -r app; do
+    [ -z "$app" ] && continue
+
+    if echo "$installed" | grep -qx "$app"; then
+        flatpak -y uninstall "$app"
+    fi
 done

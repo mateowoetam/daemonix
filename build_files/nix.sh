@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 dnf install -y https://nix-community.github.io/nix-installers/nix/x86_64/nix-multi-user-2.24.10.rpm
 
