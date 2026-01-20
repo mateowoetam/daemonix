@@ -1,5 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
+
+# Ensure flathub exists (system scope)
+flatpak remote-add --system --if-not-exists \
+  flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+#!/bin/bash
 
 # URL of the .flatpak file
 Hytale_URL="https://launcher.hytale.com/builds/release/linux/amd64/hytale-launcher-latest.flatpak"
@@ -16,7 +21,7 @@ fi
 
 # Install the .flatpak file non-interactively
 echo "Installing Hytale Launcher..."
-flatpak install --noninteractive /tmp/hytale-launcher-latest.flatpak
+flatpak install -y  --noninteractive --system /tmp/hytale-launcher-latest.flatpak
 
 # Check if the installation was successful
 if [ $? -eq 0 ]; then
@@ -27,4 +32,3 @@ else
 fi
 
 # Cleanup
-rm /tmp/hytale-launcher-latest.flatpak

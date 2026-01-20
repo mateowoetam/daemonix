@@ -4,12 +4,11 @@ declare -A scripts=(
   ["1"]="dev_mode"
   ["2"]="update_system"
   ["3"]="flatpak_update"
-  ["4"]="hytale_install"
-  ["5"]="update_nix"
-  ["6"]="enable_unstable"
-  ["7"]="enable_unfree"
-  ["8"]="nix_list"
-  ["9"]="nix_garbage"
+  ["4"]="update_nix"
+  ["5"]="enable_unstable"
+  ["6"]="enable_unfree"
+  ["7"]="nix_list"
+  ["8"]="nix_garbage"
 )
 
 dev_mode() {
@@ -21,12 +20,6 @@ dev_mode() {
 flatpak_update() {
  flatpak update
  echo "flatpak applications updated"
- sleep 3
-}
-
-hytale_install() {
- bash hytale-install
- echo "Hytale flatpak installed"
  sleep 3
 }
 
@@ -91,12 +84,11 @@ while true; do
   echo "1) Activate Developer Mode"
   echo "2) Update the system"
   echo "3) Update flatpaks"
-  echo "4) Install Hytale"
-  echo "5) Update nix channels"
-  echo "6) Enable nixpkgs unstable"
-  echo "7) Enable nix unfree packages"
-  echo "8) List installed nix packages"
-  echo "9) Run nix garbage"
+  echo "4) Update nix channels"
+  echo "5) Enable nixpkgs unstable"
+  echo "6) Enable nix unfree packages"
+  echo "7) List installed nix packages"
+  echo "8) Run nix garbage"
   echo
   echo
   read -rp "Select an option: " choice

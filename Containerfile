@@ -20,6 +20,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
     install -m755 /ctx/repository.sh /tmp/repository.sh && \
     install -m755 /ctx/default-flatpak-clean.sh /tmp/default-flatpak-clean.sh && \
+    install -m755 /ctx/system-flatpak-install.sh /tmp/system-flatpak-install.sh && \
     install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
     install -m755 /ctx/services.sh /tmp/services.sh && \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
@@ -28,13 +29,13 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
 
     install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
-    install -Dm755 /ctx/hytale-flatpak.sh /usr/bin/hytale-install && \
     install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
 
     bash /tmp/repository.sh && \
     bash /tmp/rpms.sh && \
     bash /tmp/default-flatpak-clean.sh && \
+    bash /tmp/system-flatpak-install.sh && \
     bash /tmp/nix-overlay-service.sh && \
     bash /tmp/nix.sh && \
     bash /tmp/services.sh && \
