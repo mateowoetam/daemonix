@@ -21,6 +21,8 @@
 - Fedora Atomic Base with Selinux activated
 - Install and use any linux binary with native [distrobox](https://distrobox.it/)
 - Manage apps with [discover](https://apps.kde.org/fr/discover/) and [nix-software-center](https://github.com/snowfallorg/nix-software-center)
+- Utilizes [Doas](https://man.openbsd.org/doas) instead of `sudo` for streamlined superuser privileges.
+- Employs [Dash](https://es.wikipedia.org/wiki/Debian_Almquist_Shell) as the default login shell for speed.
 
 ## Advantages over classic Fedora
 

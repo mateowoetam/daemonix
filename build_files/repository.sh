@@ -6,8 +6,5 @@ sudo dnf5 install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-re
 # FLATHUB
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# COPR
-dnf -y copr enable scottames/ghostty
-
 # LIBREWOLF
 dnf config-manager addrepo --from-repofile=https://repo.librewolf.net/librewolf.repo
