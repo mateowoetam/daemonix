@@ -8,3 +8,6 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 
 # LIBREWOLF
 dnf config-manager addrepo --from-repofile=https://repo.librewolf.net/librewolf.repo
+
+# DANGERZONE
+dnf config-manager addrepo --from-repofile=https://packages.freedom.press/yum-tools-prod/dangerzone/dangerzone.repo

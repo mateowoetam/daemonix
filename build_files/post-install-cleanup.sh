@@ -9,6 +9,9 @@ done
 # Remove LibreWolf repo
 rm -f /etc/yum.repos.d/librewolf.repo
 
+# Remove Dangerzone repo
+rm -rf /etc/yum.repos.d/dangerzone.repo
+
 dnf autoremove
 
 # (Optional) Disable Flathub

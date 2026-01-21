@@ -29,6 +29,7 @@ set -- \
     gamemode \
     VK_hdr_layer \
     alacritty \
-    librewolf
+    librewolf \
+    dangerzone
 
 dnf install --setopt=install_weak_deps=False -y "$@"
