@@ -18,28 +18,24 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
 
-    install -m755 /ctx/repository.sh /tmp/repository.sh && \
-    install -m755 /ctx/default-flatpak-clean.sh /tmp/default-flatpak-clean.sh && \
+    install -m755 /ctx/flatpak.sh /tmp/flatpak.sh && \
     install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
     install -m755 /ctx/services.sh /tmp/services.sh && \
     install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
     install -m755 /ctx/nix.sh /tmp/nix.sh && \
     install -m755 /ctx/system-config.sh /tmp/system-config.sh && \
-    install -m755 /ctx/post-install-cleanup.sh /tmp/post-install-cleanup.sh && \
     install -m755 /ctx/custom.sh /tmp/custom.sh && \
 
     install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
     install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
 
-    sh /tmp/repository.sh && \
     sh /tmp/rpms.sh && \
-    sh /tmp/default-flatpak-clean.sh && \
+    sh /tmp/flatpak.sh && \
     sh /tmp/nix-overlay-service.sh && \
     sh /tmp/nix.sh && \
     sh /tmp/system-config.sh && \
     sh /tmp/services.sh && \
-    sh /tmp/post-install-cleanup.sh && \
     sh /tmp/custom.sh
 
 
