@@ -36,7 +36,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
     # Prepare and execute scripts in the correct order from the working version
 
-    for script in rpms.sh flatpak.sh nix-overlay-service.sh nix.sh
+    for script in rpms.sh flatpak.sh nix-overlay-service.sh nix.sh \
                     system-config.sh services.sh custom.sh; do \
         if [ -f "/ctx/$script" ]; then \
             install -m755 "/ctx/$script" "/tmp/$script" && \
