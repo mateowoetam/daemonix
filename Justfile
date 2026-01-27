@@ -72,7 +72,7 @@ sudoif command *args:
     sudoif {{ command }} {{ args }}
 
 # -----------------------------------------------------------------------------
-# Container Image Build (split base / nvidia)
+# Container Image Build (single Containerfile, flavor-based)
 # -----------------------------------------------------------------------------
 
 [group('Build Image')]
@@ -82,7 +82,8 @@ build-base:
 
     podman build \
         --pull=newer \
-        -f Containerfile.base \
+        --build-arg BUILD_FLAVOR=base \
+        -f Containerfile \
         -t {{ image_name }}:{{ default_tag }} \
         .
 
@@ -91,11 +92,10 @@ build-nvidia:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    just build-base
-
     podman build \
         --pull=newer \
-        -f Containerfile.nvidia \
+        --build-arg BUILD_FLAVOR=nvidia \
+        -f Containerfile \
         -t {{ image_name }}-nvidia:{{ default_tag }} \
         .
 

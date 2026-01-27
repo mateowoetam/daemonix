@@ -1,14 +1,21 @@
+# -----------------------------------------------------------------------------
 # Build context
+# -----------------------------------------------------------------------------
 FROM scratch AS ctx
 COPY build_files/ /
 
+# -----------------------------------------------------------------------------
 # Base image
-FROM ghcr.io/ublue-os/kinoite-main:latest
+# -----------------------------------------------------------------------------
+FROM ghcr.io/ublue-os/kinoite-main:latest AS base
 
-# Prepare /opt once (base image responsibility)
+ARG BUILD_FLAVOR=base
+ENV BUILD_FLAVOR=${BUILD_FLAVOR}
+
+# Prepare /opt once
 RUN rm -rf /opt && mkdir /opt
 
-# Build phase
+# Base build phase
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/cache \
     --mount=type=cache,target=/var/cache/dnf \
@@ -33,11 +40,31 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sh /tmp/services.sh && \
     sh /tmp/custom.sh
 
+# -----------------------------------------------------------------------------
+# NVIDIA extension
+# -----------------------------------------------------------------------------
+FROM base AS nvidia
+
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,target=/var/cache \
+    --mount=type=cache,target=/var/cache/dnf \
+    --mount=type=cache,target=/var/lib/dnf \
+    --mount=type=cache,target=/var/log \
+    --mount=type=tmpfs,target=/tmp \
+    install -m755 /ctx/nvidia.sh /tmp/nvidia.sh && \
+    sh /ctx/nvidia.sh
+
+# -----------------------------------------------------------------------------
+# Final image selection
+# -----------------------------------------------------------------------------
+FROM ${BUILD_FLAVOR}
+
 # Container verification
 RUN bootc container lint
 
+# -----------------------------------------------------------------------------
 # OCI Labels
-
+# -----------------------------------------------------------------------------
 LABEL org.opencontainers.image.title="daemonix" \
       org.opencontainers.image.version="latest.20251025" \
       org.opencontainers.image.source="https://github.com/mateowoetam/daemonix/blob/main/Containerfile" \
