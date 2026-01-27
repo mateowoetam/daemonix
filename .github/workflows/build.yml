@@ -5,11 +5,11 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '05 10 * * *'
+    - cron: "05 10 * * *"
   push:
     branches: [main]
     paths-ignore:
-      - '**/README.md'
+      - "**/README.md"
   workflow_dispatch:
 
 env:
@@ -37,8 +37,8 @@ jobs:
     steps:
       - name: Prepare environment
         run: |
-          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> $GITHUB_ENV
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
 
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v5
@@ -58,7 +58,7 @@ jobs:
       - name: Get current date
         id: date
         run: |
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Image Metadata
         id: metadata
@@ -79,22 +79,40 @@ jobs:
       - name: Build base image
         uses: redhat-actions/buildah-build@v2
         with:
-          containerfiles: ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
+          containerfiles: Containerfile
+          image: daemonix
           tags: base
           target: base
-          labels: ${{ steps.metadata.outputs.labels }}
-          oci: false
 
       - name: Build nvidia image
         uses: redhat-actions/buildah-build@v2
         with:
-          containerfiles: ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
+          containerfiles: Containerfile
+          image: daemonix
           tags: nvidia
           target: nvidia
-          labels: ${{ steps.metadata.outputs.labels }}
-          oci: false
+
+      - name: Label base image
+        run: |
+          buildah commit \
+            --change 'LABEL org.opencontainers.image.title=daemonix' \
+            --change 'LABEL org.opencontainers.image.variant=base' \
+            --change 'LABEL org.opencontainers.image.source=https://github.com/${{ github.repository }}' \
+            --change 'LABEL org.opencontainers.image.revision=${{ github.sha }}' \
+            --change 'LABEL org.opencontainers.image.created=${{ steps.date.outputs.date }}' \
+            --change 'LABEL org.opencontainers.image.licenses=Apache-2.0' \
+            daemonix:base daemonix:base
+
+      - name: Label nvidia image
+        run: |
+          buildah commit \
+            --change 'LABEL org.opencontainers.image.title=daemonix' \
+            --change 'LABEL org.opencontainers.image.variant=nvidia' \
+            --change 'LABEL org.opencontainers.image.source=https://github.com/${{ github.repository }}' \
+            --change 'LABEL org.opencontainers.image.revision=${{ github.sha }}' \
+            --change 'LABEL org.opencontainers.image.created=${{ steps.date.outputs.date }}' \
+            --change 'LABEL org.opencontainers.image.licenses=Apache-2.0' \
+            daemonix:nvidia daemonix:nvidia
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
@@ -104,28 +122,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push base image to GHCR
-        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
+      - name: Push base to GHCR
+        uses: redhat-actions/push-to-registry@v2
+        if: github.event_name != 'pull_request'
         with:
-          registry: ${{ env.IMAGE_REGISTRY }}
-          image: ${{ env.IMAGE_NAME }}
+          registry: ghcr.io
+          image: daemonix
           tags: base
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push nvidia image to GHCR
-        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
+      - name: Push nvidia to GHCR
+        uses: redhat-actions/push-to-registry@v2
+        if: github.event_name != 'pull_request'
         with:
-          registry: ${{ env.IMAGE_REGISTRY }}
-          image: ${{ env.IMAGE_NAME }}
+          registry: ghcr.io
+          image: daemonix
           tags: nvidia
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}

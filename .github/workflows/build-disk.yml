@@ -25,9 +25,9 @@ on:
 
 env:
   IMAGE_NAME: ${{ github.event.repository.name }}
-  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
-  DEFAULT_TAG: "latest"
-  BIB_IMAGE: "ghcr.io/lorbuschris/bootc-image-builder:20250608"
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  DEFAULT_TAG: latest
+  BIB_IMAGE: ghcr.io/lorbuschris/bootc-image-builder:20250608
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -41,8 +41,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        disk-type: ["qcow2", "anaconda-iso"]
-        image-variant: ["base", "nvidia"]
+        disk-type: [qcow2, anaconda-iso]
+        image-variant: [base, nvidia]
 
     permissions:
       contents: read
@@ -51,20 +51,17 @@ jobs:
 
     steps:
       - name: Prepare environment
+        shell: bash
         run: |
-          USER_UID=$(id -u)
-          USER_GID=$(id -g)
-          DISK_TYPE=$(echo "${{ matrix.disk-type }}" | tr ' ' '-')
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_VARIANT=${{ matrix.image-variant }}" >> "$GITHUB_ENV"
+          echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
 
-          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> $GITHUB_ENV
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
-          echo "DISK_TYPE=${DISK_TYPE}" >> $GITHUB_ENV
-          echo "IMAGE_VARIANT=${{ matrix.image-variant }}" >> $GITHUB_ENV
-          echo "USER_UID=${USER_UID}" >> $GITHUB_ENV
-          echo "USER_GID=${USER_GID}" >> $GITHUB_ENV
-
-      - name: Install dependencies
+      - name: Install dependencies (ARM)
         if: inputs.platform == 'arm64'
+        shell: bash
         run: |
           sudo apt update -y
           sudo apt install -y podman
@@ -84,12 +81,15 @@ jobs:
         with:
           builder-image: ${{ env.BIB_IMAGE }}
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.image-variant }}
+          image: >-
+            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}${{
+              matrix.image-variant == 'nvidia' && '-nvidia' || ''
+            }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
           additional-args: --use-librepo=True
 
-      - name: Upload disk images and checksum to job artifacts
+      - name: Upload disk images and checksums
         if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4
         with:
@@ -109,8 +109,8 @@ jobs:
           RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           RCLONE_CONFIG_S3_REGION: ${{ secrets.S3_REGION }}
           RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
-          SOURCE_DIR: ${{ steps.build.outputs.output-directory }}
         run: |
           sudo apt-get update
           sudo apt-get install -y rclone
-          rclone copy "$SOURCE_DIR" S3:${{ secrets.S3_BUCKET_NAME }}
+          rclone copy "${{ steps.build.outputs.output-directory }}" \
+            "S3:${{ secrets.S3_BUCKET_NAME }}"
