@@ -1,90 +1,111 @@
-#!/bin/sh
-set -eu
-log(){
-printf '[nvidia] %s\n' "$*"
-}
-if [ "${BUILD_FLAVOR:-}" != "nvidia" ];then
-log "BUILD_FLAVOR != nvidia, skipping NVIDIA setup"
-exit 0
-fi
-set -x
-KERNEL_VERSION="$(ls -1 /usr/lib/modules 2>/dev/null|sort|tail -n 1||true)"
-if [ -z "$KERNEL_VERSION" ];then
-log "ERROR: No kernel found in /usr/lib/modules"
-exit 1
-fi
-log "Using kernel: $KERNEL_VERSION"
-if [ ! -f /etc/yum.repos.d/fedora-nvidia.repo ];then
-dnf config-manager addrepo \
---from-repofile=https://negativo17.org/repos/fedora-nvidia.repo
-fi
-dnf config-manager setopt fedora-nvidia.enabled=0||true
-if ! grep -q '^priority=' /etc/yum.repos.d/fedora-nvidia.repo;then
-sed -i '/^enabled=/a priority=90' /etc/yum.repos.d/fedora-nvidia.repo
-fi
-dnf -y install gcc-c++ --setopt=install_weak_deps=False
-if ! rpm -q akmod-nvidia >/dev/null 2>&1;then
-dnf -y install --enablerepo=fedora-nvidia akmod-nvidia
-fi
-mkdir -p /var/tmp
-chmod 1777 /var/tmp
-akmods --force --kernels "$KERNEL_VERSION" --kmod nvidia||true
-cat /var/cache/akmods/nvidia/*.failed.log 2>/dev/null||true
-dnf -y install --enablerepo=fedora-nvidia \
-nvidia-driver \
-nvidia-driver-cuda \
-libnvidia-fbc \
-libva-nvidia-driver \
-nvidia-modprobe \
-nvidia-persistenced \
-nvidia-settings
-if [ ! -f /etc/yum.repos.d/nvidia-container-toolkit.repo ];then
-dnf config-manager addrepo \
---from-repofile=https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo
-fi
-dnf config-manager setopt nvidia-container-toolkit.enabled=0||true
-if ! rpm -q nvidia-container-toolkit >/dev/null 2>&1;then
-dnf -y install --enablerepo=nvidia-container-toolkit nvidia-container-toolkit
-fi
-if command -v semodule >/dev/null 2>&1;then
-curl -fsSL \
-https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL9/nvidia-container.pp \
--o /tmp/nvidia-container.pp||true
-semodule -i /tmp/nvidia-container.pp||true
-rm -f /tmp/nvidia-container.pp
-fi
-cat >/usr/lib/modprobe.d/00-nouveau-blacklist.conf <<'EOF'
-blacklist nouveau
-options nouveau modeset=0
-EOF
-mkdir -p /usr/lib/bootc/kargs.d
-cat >/usr/lib/bootc/kargs.d/00-nvidia.toml <<'EOF'
-kargs = [
-  "rd.driver.blacklist=nouveau",
-  "modprobe.blacklist=nouveau",
-  "nvidia-drm.modeset=1"
-]
-EOF
-if [ -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf ];then
-sed -i 's/omit_drivers/force_drivers/g' \
-/usr/lib/dracut/dracut.conf.d/99-nvidia.conf
-sed -i 's/ nvidia / i915 amdgpu nvidia /g' \
-/usr/lib/dracut/dracut.conf.d/99-nvidia.conf
-fi
-if [ -f /etc/modprobe.d/nvidia-modeset.conf ];then
-mv -f /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/
-fi
-cat >/usr/lib/systemd/system/nvctk-cdi.service <<'EOF'
-[Unit]
-Description=NVIDIA container toolkit CDI auto-generation
-ConditionFileIsExecutable=/usr/bin/nvidia-ctk
-After=local-fs.target
+#!/bin/bash
 
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+set -ouex pipefail
 
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl enable nvctk-cdi.service 2>/dev/null||true
+FRELEASE="$(rpm -E %fedora)"
+: "${AKMODNV_PATH:=/tmp/akmods-rpms}"
+
+# this is only to aid in human understanding of any issues in CI
+find "${AKMODNV_PATH}"/
+
+if ! command -v dnf5 >/dev/null; then
+    echo "Requires dnf5... Exiting"
+    exit 1
+fi
+
+# Check if any rpmfusion repos exist before trying to disable them
+if dnf5 repolist --all | grep -q rpmfusion; then
+    dnf5 config-manager setopt "rpmfusion*".enabled=0
+fi
+
+# Always try to disable cisco repo (or add similar check)
+dnf5 config-manager setopt fedora-cisco-openh264.enabled=0
+
+## nvidia install steps
+dnf5 install -y "${AKMODNV_PATH}"/ublue-os/ublue-os-nvidia-addons-*.rpm
+
+# Install MULTILIB packages from negativo17-multimedia prior to disabling repo
+
+MULTILIB=(
+    mesa-dri-drivers.i686
+    mesa-filesystem.i686
+    mesa-libEGL.i686
+    mesa-libGL.i686
+    mesa-libgbm.i686
+    mesa-va-drivers.i686
+    mesa-vulkan-drivers.i686
+)
+
+dnf5 install -y "${MULTILIB[@]}"
+
+# enable repos provided by ublue-os-nvidia-addons (not enabling fedora-nvidia-lts)
+dnf5 config-manager setopt fedora-nvidia.enabled=1 nvidia-container-toolkit.enabled=1
+
+# Disable Multimedia
+NEGATIVO17_MULT_PREV_ENABLED=N
+if dnf5 repolist --enabled | grep -q "fedora-multimedia"; then
+    NEGATIVO17_MULT_PREV_ENABLED=Y
+    echo "disabling negativo17-fedora-multimedia to ensure negativo17-fedora-nvidia is used"
+    dnf5 config-manager setopt fedora-multimedia.enabled=0
+fi
+
+# Enable staging for supergfxctl if repo file exists
+if [[ -f /etc/yum.repos.d/_copr_ublue-os-staging.repo ]]; then
+    sed -i 's@enabled=0@enabled=1@g' /etc/yum.repos.d/_copr_ublue-os-staging.repo
+else
+    # Otherwise, retrieve the repo file for staging
+    curl -Lo /etc/yum.repos.d/_copr_ublue-os-staging.repo https://copr.fedorainfracloud.org/coprs/ublue-os/staging/repo/fedora-"${FRELEASE}"/ublue-os-staging-fedora-"${FRELEASE}".repo
+fi
+
+source "${AKMODNV_PATH}"/kmods/nvidia-vars
+
+if [[ "${IMAGE_NAME}" == "kinoite" ]]; then
+    VARIANT_PKGS="supergfxctl-plasmoid supergfxctl"
+elif [[ "${IMAGE_NAME}" == "silverblue" ]]; then
+    VARIANT_PKGS="gnome-shell-extension-supergfxctl-gex supergfxctl"
+else
+    VARIANT_PKGS=""
+fi
+
+dnf5 install -y \
+    libnvidia-fbc \
+    libnvidia-ml.i686 \
+    libva-nvidia-driver \
+    nvidia-driver \
+    nvidia-driver-cuda \
+    nvidia-driver-cuda-libs.i686 \
+    nvidia-driver-libs.i686 \
+    nvidia-settings \
+    nvidia-container-toolkit \
+    ${VARIANT_PKGS} \
+    "${AKMODNV_PATH}"/kmods/kmod-nvidia-"${KERNEL_VERSION}"-"${NVIDIA_AKMOD_VERSION}"."${DIST_ARCH}".rpm
+
+# Ensure the version of the Nvidia module matches the driver
+KMOD_VERSION="$(rpm -q --queryformat '%{VERSION}' kmod-nvidia)"
+DRIVER_VERSION="$(rpm -q --queryformat '%{VERSION}' nvidia-driver)"
+if [ "$KMOD_VERSION" != "$DRIVER_VERSION" ]; then
+    echo "Error: kmod-nvidia version ($KMOD_VERSION) does not match nvidia-driver version ($DRIVER_VERSION)"
+    exit 1
+fi
+
+## nvidia post-install steps
+# disable repos provided by ublue-os-nvidia-addons
+dnf5 config-manager setopt fedora-nvidia.enabled=0 fedora-nvidia-lts.enabled=0 nvidia-container-toolkit.enabled=0
+
+# Disable staging
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_ublue-os-staging.repo
+
+systemctl enable ublue-nvctk-cdi.service
+semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
+
+# Universal Blue specific Initramfs fixes
+cp /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
+# we must force driver load to fix black screen on boot for nvidia desktops
+sed -i 's@omit_drivers@force_drivers@g' /usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+# as we need forced load, also mustpre-load intel/amd iGPU else chromium web browsers fail to use hardware acceleration
+sed -i 's@ nvidia @ i915 amdgpu nvidia @g' /usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+
+# re-enable negativo17-mutlimedia since we disabled it
+if [[ "${NEGATIVO17_MULT_PREV_ENABLED}" = "Y" ]]; then
+    dnf5 config-manager setopt fedora-multimedia.enabled=1
+fi

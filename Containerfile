@@ -16,7 +16,6 @@ LABEL \
   org.opencontainers.image.source="https://github.com/mateowoetam/daemonix" \
   org.opencontainers.image.licenses="Apache-2.0"
 
-# Prepare /opt once
 RUN rm -rf /opt && mkdir /opt
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -44,9 +43,9 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sh /tmp/custom.sh
 
 # -----------------------------------------------------------------------------
-# NVIDIA extension
+# NVIDIA image
 # -----------------------------------------------------------------------------
-FROM ghcr.io/ublue-os/kinoite-main:latest AS nvidia
+FROM ghcr.io/ublue-os/kinoite-nvidia:latest AS nvidia
 
 LABEL \
   org.opencontainers.image.title="daemonix-nvidia" \
@@ -55,7 +54,6 @@ LABEL \
   org.opencontainers.image.source="https://github.com/mateowoetam/daemonix" \
   org.opencontainers.image.licenses="Apache-2.0"
 
-# Prepare /opt once
 RUN rm -rf /opt && mkdir /opt
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -82,19 +80,10 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sh /tmp/services.sh && \
     sh /tmp/custom.sh
 
-RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
-    --mount=type=cache,target=/var/cache \
-    --mount=type=cache,target=/var/cache/dnf \
-    --mount=type=cache,target=/var/lib/dnf \
-    --mount=type=cache,target=/var/log \
-    --mount=type=tmpfs,target=/tmp \
-    install -m755 /ctx/nvidia.sh /tmp/nvidia.sh && \
-    sh /tmp/nvidia.sh
-
 # -----------------------------------------------------------------------------
-# Final image selection
+# Final selection
 # -----------------------------------------------------------------------------
 ARG BUILD_FLAVOR
-FROM ${BUILD_FLAVOR}
+FROM ${BUILD_FLAVOR} AS final
 
 RUN bootc container lint
