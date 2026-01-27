@@ -49,7 +49,7 @@ jobs:
           remove-codeql: true
 
       - name: Mount BTRFS for podman storage
-        uses: ublue-os/container-storage-action@v1
+        uses: - uses: ublue-os/container-storage-action@main
         continue-on-error: true
         with:
           target-dir: /var/lib/containers
