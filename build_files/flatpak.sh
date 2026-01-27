@@ -11,4 +11,10 @@ if flatpak list --app --columns=application|grep "$app";then
 flatpak remove -y "$app"
 fi
 done
-flatpak install -y flathub io.github.kolunmi.Bazaar
+flatpak install -y flathub \
+io.github.kolunmi.Bazaar \
+io.github.flattool.Warehouse \
+com.belmoussaoui.Authenticator \
+org.libreoffice.LibreOffice \
+org.kde.elisa \
+org.videolan.VLC

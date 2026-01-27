@@ -12,13 +12,13 @@ kde-connect \
 kwalletmanager \
 kdebugsettings \
 plasma-discover \
+okular \
 fcitx5
 dnf install -y \
 "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$FEDORA_VERSION.noarch.rpm" \
 "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$FEDORA_VERSION.noarch.rpm"
 dnf install --setopt=install_weak_deps=False -y \
 libavcodec-freeworld \
-vlc \
 VK_hdr_layer
 dnf config-manager setopt rpmfusion-free.enabled=0||true
 dnf config-manager setopt rpmfusion-nonfree.enabled=0||true
@@ -38,7 +38,8 @@ distrobox \
 fastfetch \
 gamescope \
 gamemode \
-alacritty
+wine \
+alacritty \
 dnf autoremove -y
 dnf clean all
 echo "RPM setup complete. Temporary repos cleaned up."
