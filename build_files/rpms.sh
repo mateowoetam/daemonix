@@ -40,5 +40,4 @@ gamescope \
 gamemode \
 wine \
 alacritty \
-dnf clean all
 echo "RPM setup complete. Temporary repos cleaned up."

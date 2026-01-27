@@ -7,6 +7,10 @@ COPY build_files/ /
 
 FROM ghcr.io/ublue-os/kinoite-main:latest
 
+# Setup flavour
+ARG BUILD_FLAVOR=base
+ENV BUILD_FLAVOR=${BUILD_FLAVOR}
+
 # OPT preparation
 
 RUN rm -rf /opt && mkdir /opt
@@ -41,15 +45,10 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
 # NVIDIA DRIVERS
 
-COPY --from=ghcr.io/ublue-os/akmods-nvidia-open:main-43 / /tmp/akmods-nvidia
-
-RUN dnf install -y \
-    /tmp/akmods-nvidia/rpms/kmods/kmod-nvidia-*.rpm \
-    /tmp/akmods-nvidia/rpms/ublue-os/ublue-os-nvidia-addons-*.rpm \
-    nvidia-driver \
-    nvidia-driver-libs \
-    nvidia-settings && \
-    dnf clean all
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=tmpfs,target=/tmp \
+    BUILD_FLAVOR=${BUILD_FLAVOR} \
+    bash /ctx/nvidia.sh
 
 # Container verification
 
