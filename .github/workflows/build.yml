@@ -66,7 +66,7 @@ jobs:
       - name: Build base image
         uses: redhat-actions/buildah-build@v2
         with:
-          containerfiles: Containerfile
+          containerfiles: BaseContainerfile
           image: ${{ env.IMAGE_NAME }}
           tags: ${{ env.DEFAULT_TAG }}
           build-args: |
@@ -114,10 +114,10 @@ jobs:
 # =====================================================================
 # NVIDIA IMAGE
 # =====================================================================
+jobs:
   build_nvidia:
-    name: Build & push nvidia image
+    name: Build & push Nvidia image
     runs-on: ubuntu-24.04
-    needs: build_base
 
     permissions:
       contents: read
@@ -150,16 +150,16 @@ jobs:
         run: |
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Build nvidia image
+      - name: Build Nvidia image
         uses: redhat-actions/buildah-build@v2
         with:
-          containerfiles: Containerfile
-          image: ${{ env.IMAGE_NAME }}-nvidia
+          containerfiles: NvidiaContainerfile
+          image: ${{ env.IMAGE_NAME }}
           tags: ${{ env.DEFAULT_TAG }}
           build-args: |
             BUILD_FLAVOR=nvidia
           labels: |
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}-nvidia
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.description=${{ env.IMAGE_DESC }}
             org.opencontainers.image.variant=nvidia
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -182,10 +182,21 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           registry: ghcr.io
-          image: ${{ env.IMAGE_NAME }}-nvidia
+          image: ${{ env.IMAGE_NAME }}
           tags: ${{ env.DEFAULT_TAG }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------
+      # CLEANUP (IMPORTANT)
+      # -------------------------
+      - name: Cleanup nvidia image
+        if: always()
+        run: |
+          buildah rmi -f ${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }} || true
+          buildah rm -a || true
+          buildah rmi -a || true
+          buildah prune -f || true
 
       # -------------------------
       # CLEANUP (IMPORTANT)
