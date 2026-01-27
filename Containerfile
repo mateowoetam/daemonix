@@ -25,12 +25,12 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
     /bin/sh -eux <<'EOF'
-# Install helper binaries
+mkdir -p /var/cache/dnf /var/lib/dnf
+
 install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
 install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
 install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
 
-# Install build scripts into /tmp
 for script in \
   rpms.sh \
   flatpak.sh \
@@ -43,7 +43,6 @@ do
   install -m755 "/ctx/$script" "/tmp/$script"
 done
 
-# Execute scripts in strict order
 /tmp/rpms.sh
 /tmp/flatpak.sh
 /tmp/nix-overlay-service.sh
@@ -52,7 +51,6 @@ done
 /tmp/services.sh
 /tmp/custom.sh
 
-# Final safety cleanup (tmpfs, but be explicit)
 rm -rf /tmp/*
 EOF
 
@@ -77,6 +75,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
     /bin/sh -eux <<'EOF'
+mkdir -p /var/cache/dnf /var/lib/dnf
+
 install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
 install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
 install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
