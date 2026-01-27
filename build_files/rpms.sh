@@ -40,6 +40,5 @@ gamescope \
 gamemode \
 wine \
 alacritty \
-dnf autoremove -y
 dnf clean all
 echo "RPM setup complete. Temporary repos cleaned up."
