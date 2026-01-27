@@ -5,14 +5,14 @@ FROM scratch AS ctx
 COPY build_files/ /
 
 # -----------------------------------------------------------------------------
-# Base image
+# Nvidia image
 # -----------------------------------------------------------------------------
 FROM ghcr.io/ublue-os/kinoite-nvidia:latest AS nvidia
 
 LABEL \
   org.opencontainers.image.title="daemonix" \
-  org.opencontainers.image.description="Daemonix OS (Base)" \
-  org.opencontainers.image.variant="base" \
+  org.opencontainers.image.description="Daemonix OS (Nvidia)" \
+  org.opencontainers.image.variant="nvidia" \
   org.opencontainers.image.source="https://github.com/mateowoetam/daemonix" \
   org.opencontainers.image.licenses="Apache-2.0"
 

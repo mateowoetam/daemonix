@@ -1,4 +1,3 @@
----
 name: Build container image
 
 on:
@@ -16,7 +15,6 @@ env:
   IMAGE_DESC: "Universal Blue supercharged by Nix"
   IMAGE_KEYWORDS: "bootc,ublue,universal-blue,nix"
   IMAGE_LOGO_URL: "https://avatars.githubusercontent.com/u/120078124?s=200&v=4"
-  IMAGE_NAME: "${{ github.event.repository.name }}"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
   DEFAULT_TAG: "latest"
 
@@ -24,27 +22,30 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
-# =====================================================================
-# BASE IMAGE
-# =====================================================================
 jobs:
-  build_base:
-    name: Build & push base image
+  build:
+    name: Build & push images
     runs-on: ubuntu-24.04
-
     permissions:
       contents: read
       packages: write
       id-token: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - { name: 'base', base_image: 'ghcr.io/ublue-os/kinoite-main:latest' }
+          - { name: 'nvidia', base_image: 'ghcr.io/ublue-os/kinoite-nvidia:latest' }
+
     steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+
       - name: Prepare environment
         run: |
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
-
-      - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+          echo "IMAGE_NAME=${{ github.event.repository.name }}-${{ matrix.container.name }}" >> "$GITHUB_ENV"
 
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e
@@ -60,151 +61,57 @@ jobs:
 
       - name: Get current date
         id: date
-        run: |
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      - name: Build base image
-        uses: redhat-actions/buildah-build@v2
+      - name: Build image
+        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056
+        id: build
         with:
-          containerfiles: BaseContainerfile
+          containerfiles: Containerfiles/Universal.Containerfile
+          context: .
           image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
+          tags: ${{ env.DEFAULT_TAG }} ${{ github.sha }}
           build-args: |
-            BUILD_FLAVOR=base
+            BASE_IMAGE=${{ matrix.container.base_image }}
+            VARIANT=${{ matrix.container.name }}
+            IMAGE_NAME=${{ env.IMAGE_NAME }}
           labels: |
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.description=${{ env.IMAGE_DESC }}
-            org.opencontainers.image.variant=base
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
             org.opencontainers.image.licenses=Apache-2.0
-            io.artifacthub.package.keywords=${{ env.IMAGE_KEYWORDS }}
-            io.artifacthub.package.logo-url=${{ env.IMAGE_LOGO_URL }}
 
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push base image
+      - name: Push image
         if: github.event_name != 'pull_request'
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c
         with:
-          registry: ghcr.io
+          registry: ${{ env.IMAGE_REGISTRY }}
           image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
+          tags: ${{ env.DEFAULT_TAG }} ${{ github.sha }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # -------------------------
-      # CLEANUP (IMPORTANT)
-      # -------------------------
-      - name: Cleanup base image
-        if: always()
-        run: |
-          buildah rmi -f ${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }} || true
-          buildah rm -a || true
-          buildah rmi -a || true
-          buildah prune -f || true
-
-# =====================================================================
-# NVIDIA IMAGE
-# =====================================================================
-jobs:
-  build_nvidia:
-    name: Build & push Nvidia image
-    runs-on: ubuntu-24.04
-
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    steps:
-      - name: Prepare environment
-        run: |
-          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
-
-      - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
-
-      - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e
-        with:
-          remove-codeql: true
-
-      - name: Mount BTRFS for podman storage
-        uses: ublue-os/container-storage-action@911baca08baf30c8654933e9e9723cb399892140
-        continue-on-error: true
-        with:
-          target-dir: /var/lib/containers
-          mount-opts: compress-force=zstd:2
-
-      - name: Get current date
-        id: date
-        run: |
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
-      - name: Build Nvidia image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          containerfiles: NvidiaContainerfile
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
-          build-args: |
-            BUILD_FLAVOR=nvidia
-          labels: |
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-            org.opencontainers.image.description=${{ env.IMAGE_DESC }}
-            org.opencontainers.image.variant=nvidia
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.licenses=Apache-2.0
-            io.artifacthub.package.keywords=${{ env.IMAGE_KEYWORDS }}
-            io.artifacthub.package.logo-url=${{ env.IMAGE_LOGO_URL }}
-
-      - name: Login to GitHub Container Registry
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push nvidia image
+      - name: Sign container image
         if: github.event_name != 'pull_request'
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          registry: ghcr.io
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # -------------------------
-      # CLEANUP (IMPORTANT)
-      # -------------------------
-      - name: Cleanup nvidia image
-        if: always()
         run: |
-          buildah rmi -f ${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }} || true
-          buildah rm -a || true
-          buildah rmi -a || true
-          buildah prune -f || true
-
-      # -------------------------
-      # CLEANUP (IMPORTANT)
-      # -------------------------
-      - name: Cleanup nvidia image
-        if: always()
-        run: |
-          buildah rmi -f ${{ env.IMAGE_NAME }}-nvidia:${{ env.DEFAULT_TAG }} || true
-          buildah rm -a || true
-          buildah rmi -a || true
-          buildah prune -f || true
+          IMAGE_FULL="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          # Sign both the 'latest' tag and the commit SHA tag
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_FULL}:${{ github.sha }}"
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
