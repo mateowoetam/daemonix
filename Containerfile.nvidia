@@ -1,0 +1,31 @@
+# Build context
+FROM scratch AS ctx
+COPY build_files/ /
+
+# Base daemonix image
+FROM ghcr.io/mateowoetam/daemonix:latest
+
+# NVIDIA drivers
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,target=/var/cache \
+    --mount=type=cache,target=/var/cache/dnf \
+    --mount=type=cache,target=/var/lib/dnf \
+    --mount=type=cache,target=/var/log \
+    --mount=type=tmpfs,target=/tmp \
+    sh /ctx/nvidia.sh
+
+# Container verification
+RUN bootc container lint
+
+# OCI Labels
+
+LABEL org.opencontainers.image.title="daemonix" \
+      org.opencontainers.image.version="latest.20251025" \
+      org.opencontainers.image.source="https://github.com/mateowoetam/daemonix/blob/main/Containerfile" \
+      org.opencontainers.image.revision="c7d20d37c17a23bc97c7e2aa22adfe329626302f" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="mateowoetam" \
+      org.opencontainers.image.url="https://github.com/mateowoetam/daemonix" \
+      org.opencontainers.image.documentation="https://raw.githubusercontent.com/mateowoetam/daemonix/refs/heads/main/README.md" \
+      org.opencontainers.image.description="Universal Blue Supercharged by Nix" \
+      org.opencontainers.image.created="2025-10-25T23:21:35Z"

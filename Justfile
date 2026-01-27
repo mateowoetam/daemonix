@@ -10,7 +10,10 @@ alias run-vm := run-vm-qcow2
 default:
     @just --list
 
-# Check Just Syntax
+# -----------------------------------------------------------------------------
+# Justfile maintenance
+# -----------------------------------------------------------------------------
+
 [group('Just')]
 check:
     #!/usr/bin/bash
@@ -21,7 +24,6 @@ check:
     echo "Checking syntax: Justfile"
     just --unstable --fmt --check -f Justfile
 
-# Fix Just Syntax
 [group('Just')]
 fix:
     #!/usr/bin/bash
@@ -32,7 +34,10 @@ fix:
     echo "Formatting: Justfile"
     just --unstable --fmt -f Justfile || { exit 1; }
 
-# Clean Repo
+# -----------------------------------------------------------------------------
+# Cleanup
+# -----------------------------------------------------------------------------
+
 [group('Utility')]
 clean:
     #!/usr/bin/bash
@@ -44,13 +49,11 @@ clean:
     rm -f output.env
     rm -rf output/
 
-# Sudo Clean Repo
 [group('Utility')]
 [private]
 sudo-clean:
     just sudoif just clean
 
-# sudoif bash function
 [group('Utility')]
 [private]
 sudoif command *args:
@@ -59,9 +62,9 @@ sudoif command *args:
         if [[ "${UID}" -eq 0 ]]; then
             "$@"
         elif [[ "$(command -v sudo)" && -n "${SSH_ASKPASS:-}" ]] && [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
-            /usr/bin/sudo --askpass "$@" || exit 1
+            sudo --askpass "$@" || exit 1
         elif [[ "$(command -v sudo)" ]]; then
-            /usr/bin/sudo "$@" || exit 1
+            sudo "$@" || exit 1
         else
             exit 1
         fi
@@ -69,39 +72,34 @@ sudoif command *args:
     sudoif {{ command }} {{ args }}
 
 # -----------------------------------------------------------------------------
-# Container Image Build (flavor-aware)
+# Container Image Build (split base / nvidia)
 # -----------------------------------------------------------------------------
 
-# Build the image
-# Parameters:
-#   target_image: image name (default: daemonix)
-#   tag: image tag (default: latest)
-#   flavor: base | nvidia
-build $target_image=image_name $tag=default_tag $flavor="base":
+[group('Build Image')]
+build-base:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    BUILD_ARGS=(
-        "--build-arg" "BUILD_FLAVOR={{ flavor }}"
-    )
-
-    if [[ -z "$(git status -s)" ]]; then
-        BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
-    fi
-
     podman build \
-        "${BUILD_ARGS[@]}" \
         --pull=newer \
-        --tag "{{ target_image }}:{{ tag }}" \
+        -f Containerfile.base \
+        -t {{ image_name }}:{{ default_tag }} \
         .
 
-# Convenience targets
-build-base:
-    just build {{ image_name }} {{ default_tag }} base
-
+[group('Build Image')]
 build-nvidia:
-    just build {{ image_name }}-nvidia {{ default_tag }} nvidia
+    #!/usr/bin/env bash
+    set -euo pipefail
 
+    just build-base
+
+    podman build \
+        --pull=newer \
+        -f Containerfile.nvidia \
+        -t {{ image_name }}-nvidia:{{ default_tag }} \
+        .
+
+[group('Build Image')]
 build-all:
     just build-base
     just build-nvidia
@@ -157,7 +155,7 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
         -v $(pwd)/${config}:/config.toml:ro \
         -v $BUILDTMP:/output \
         -v /var/lib/containers/storage:/var/lib/containers/storage \
-        "${bib_image}" \
+        "{{ bib_image }}" \
         ${args} \
         "${target_image}:${tag}"
 
@@ -166,12 +164,8 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
     sudo rmdir $BUILDTMP
     sudo chown -R $USER:$USER output/
 
-_rebuild-bib $target_image $tag $type $config:
-    just build {{ target_image }} {{ tag }} base
-    just _build-bib {{ target_image }} {{ tag }} {{ type }} {{ config }}
-
 # -----------------------------------------------------------------------------
-# ISO Targets (Base + NVIDIA)
+# ISO Targets
 # -----------------------------------------------------------------------------
 
 build-iso:
@@ -179,28 +173,56 @@ build-iso:
     just _build-bib "localhost/{{ image_name }}" {{ default_tag }} iso disk_config/iso.toml
 
 build-iso-nvidia:
-    just build {{ image_name }}-nvidia {{ default_tag }} nvidia
+    just build-nvidia
     just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} iso disk_config/iso.toml
 
 # -----------------------------------------------------------------------------
-# QCOW / RAW Builds (unchanged)
+# QCOW / RAW Builds (Base)
 # -----------------------------------------------------------------------------
 
 [group('Build Virtual Machine Image')]
-build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag:
-    just _build-bib {{ target_image }} {{ tag }} qcow2 disk_config/disk.toml
+build-qcow2:
+    just build-base
+    just _build-bib "localhost/{{ image_name }}" {{ default_tag }} qcow2 disk_config/disk.toml
 
 [group('Build Virtual Machine Image')]
-build-raw $target_image=("localhost/" + image_name) $tag=default_tag:
-    just _build-bib {{ target_image }} {{ tag }} raw disk_config/disk.toml
+build-raw:
+    just build-base
+    just _build-bib "localhost/{{ image_name }}" {{ default_tag }} raw disk_config/disk.toml
 
 [group('Build Virtual Machine Image')]
-rebuild-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag:
-    just _rebuild-bib {{ target_image }} {{ tag }} qcow2 disk_config/disk.toml
+rebuild-qcow2:
+    just build-base
+    just _build-bib "localhost/{{ image_name }}" {{ default_tag }} qcow2 disk_config/disk.toml
 
 [group('Build Virtual Machine Image')]
-rebuild-raw $target_image=("localhost/" + image_name) $tag=default_tag:
-    just _rebuild-bib {{ target_image }} {{ tag }} raw disk_config/disk.toml
+rebuild-raw:
+    just build-base
+    just _build-bib "localhost/{{ image_name }}" {{ default_tag }} raw disk_config/disk.toml
+
+# -----------------------------------------------------------------------------
+# QCOW / RAW Builds (NVIDIA)
+# -----------------------------------------------------------------------------
+
+[group('Build Virtual Machine Image')]
+build-qcow2-nvidia:
+    just build-nvidia
+    just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} qcow2 disk_config/disk.toml
+
+[group('Build Virtual Machine Image')]
+build-raw-nvidia:
+    just build-nvidia
+    just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} raw disk_config/disk.toml
+
+[group('Build Virtual Machine Image')]
+rebuild-qcow2-nvidia:
+    just build-nvidia
+    just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} qcow2 disk_config/disk.toml
+
+[group('Build Virtual Machine Image')]
+rebuild-raw-nvidia:
+    just build-nvidia
+    just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} raw disk_config/disk.toml
 
 # -----------------------------------------------------------------------------
 # Lint / Format

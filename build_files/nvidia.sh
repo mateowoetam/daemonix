@@ -1,7 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/sh
 if [[ ! "$BUILD_FLAVOR" =~ "nvidia" ]];then
-exit 0
-fi
 set -xeuo pipefail
 KERNEL_VERSION="$(find "/usr/lib/modules" -maxdepth 1 -type d ! -path "/usr/lib/modules" -exec basename '{}' ';'|sort|tail -n 1)"
 dnf config-manager addrepo --from-repofile=https://negativo17.org/repos/fedora-nvidia.repo
@@ -51,3 +49,80 @@ systemctl disable akmods-keygen@akmods-keygen.service
 systemctl mask akmods-keygen@akmods-keygen.service
 systemctl disable akmods-keygen.target
 systemctl mask akmods-keygen.target
+rm -rf /var/cache/akmods#!/bin/sh
+set -eu
+set -x
+KERNEL_VERSION="$(ls -1 /usr/lib/modules|sort|tail -n 1)"
+if [ -z "$KERNEL_VERSION" ];then
+echo "ERROR: No kernel found in /usr/lib/modules"
+exit 1
+fi
+dnf config-manager addrepo --from-repofile=https://negativo17.org/repos/fedora-nvidia.repo
+dnf config-manager setopt fedora-nvidia.enabled=0
+sed -i '/^enabled=/a\
+priority=90' /etc/yum.repos.d/fedora-nvidia.repo
+dnf -y install gcc-c++ akmod-nvidia --enablerepo=fedora-nvidia
+mkdir -p /var/tmp
+chmod 1777 /var/tmp
+akmods --force --kernels "$KERNEL_VERSION" --kmod nvidia||true
+cat /var/cache/akmods/nvidia/*.failed.log 2>/dev/null||true
+dnf -y install --enablerepo=fedora-nvidia \
+nvidia-driver \
+nvidia-driver-cuda \
+libnvidia-fbc \
+libva-nvidia-driver \
+nvidia-modprobe \
+nvidia-persistenced \
+nvidia-settings
+dnf config-manager addrepo --from-repofile=https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo
+dnf config-manager setopt nvidia-container-toolkit.enabled=0
+dnf -y install --enablerepo=nvidia-container-toolkit nvidia-container-toolkit
+if command -v semodule >/dev/null 2>&1;then
+curl -fsSL https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL9/nvidia-container.pp \
+-o /tmp/nvidia-container.pp
+semodule -i /tmp/nvidia-container.pp||true
+rm -f /tmp/nvidia-container.pp
+fi
+cat >/usr/lib/modprobe.d/00-nouveau-blacklist.conf <<'EOF'
+blacklist nouveau
+options nouveau modeset=0
+EOF
+cat >/usr/lib/bootc/kargs.d/00-nvidia.toml <<'EOF'
+kargs = [
+  "rd.driver.blacklist=nouveau",
+  "modprobe.blacklist=nouveau",
+  "nvidia-drm.modeset=1"
+]
+EOF
+if [ -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf ];then
+sed -i 's/omit_drivers/force_drivers/g' \
+/usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+sed -i 's/ nvidia / i915 amdgpu nvidia /g' \
+/usr/lib/dracut/dracut.conf.d/99-nvidia.conf
+fi
+if [ -f /etc/modprobe.d/nvidia-modeset.conf ];then
+mv /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/
+fi
+cat >/usr/lib/systemd/system/nvctk-cdi.service <<'EOF'
+[Unit]
+Description=NVIDIA container toolkit CDI auto-generation
+ConditionFileIsExecutable=/usr/bin/nvidia-ctk
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable nvctk-cdi.service
+systemctl mask akmods-keygen@akmods-keygen.service akmods-keygen.target
+rm -rf /var/cache/akmods /var/tmp/akmods*
+dnf clean all
+rm -rf /var/cache/dnf
+rm -rf /var/tmp/akmods*
+dnf clean all
+rm -rf /var/cache/dnf
+exit 0
+fi

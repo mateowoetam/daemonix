@@ -38,4 +38,6 @@ fastfetch \
 gamescope \
 wine \
 alacritty
+dnf clean all
+rm -rf /var/cache/dnf
 echo "RPM setup complete. Temporary repos cleaned up."
