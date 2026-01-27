@@ -16,7 +16,7 @@ LABEL \
   org.opencontainers.image.source="https://github.com/mateowoetam/daemonix" \
   org.opencontainers.image.licenses="Apache-2.0"
 
-RUN rm -rf /opt && mkdir /opt
+RUN rm -rf /opt && mkdir -p /opt
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/cache \
@@ -24,23 +24,37 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/lib/dnf \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
-    install -m755 /ctx/flatpak.sh /tmp/flatpak.sh && \
-    install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
-    install -m755 /ctx/services.sh /tmp/services.sh && \
-    install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
-    install -m755 /ctx/nix.sh /tmp/nix.sh && \
-    install -m755 /ctx/system-config.sh /tmp/system-config.sh && \
-    install -m755 /ctx/custom.sh /tmp/custom.sh && \
-    install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
-    install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
-    install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
-    sh /tmp/rpms.sh && \
-    sh /tmp/flatpak.sh && \
-    sh /tmp/nix-overlay-service.sh && \
-    sh /tmp/nix.sh && \
-    sh /tmp/system-config.sh && \
-    sh /tmp/services.sh && \
-    sh /tmp/custom.sh
+    /bin/sh -eux <<'EOF'
+# Install helper binaries
+install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
+install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
+install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
+
+# Install build scripts into /tmp
+for script in \
+  rpms.sh \
+  flatpak.sh \
+  nix-overlay-service.sh \
+  nix.sh \
+  system-config.sh \
+  services.sh \
+  custom.sh
+do
+  install -m755 "/ctx/$script" "/tmp/$script"
+done
+
+# Execute scripts in strict order
+/tmp/rpms.sh
+/tmp/flatpak.sh
+/tmp/nix-overlay-service.sh
+/tmp/nix.sh
+/tmp/system-config.sh
+/tmp/services.sh
+/tmp/custom.sh
+
+# Final safety cleanup (tmpfs, but be explicit)
+rm -rf /tmp/*
+EOF
 
 # -----------------------------------------------------------------------------
 # NVIDIA image
@@ -54,7 +68,7 @@ LABEL \
   org.opencontainers.image.source="https://github.com/mateowoetam/daemonix" \
   org.opencontainers.image.licenses="Apache-2.0"
 
-RUN rm -rf /opt && mkdir /opt
+RUN rm -rf /opt && mkdir -p /opt
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/cache \
@@ -62,23 +76,33 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/lib/dnf \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
-    install -m755 /ctx/flatpak.sh /tmp/flatpak.sh && \
-    install -m755 /ctx/rpms.sh /tmp/rpms.sh && \
-    install -m755 /ctx/services.sh /tmp/services.sh && \
-    install -m755 /ctx/nix-overlay-service.sh /tmp/nix-overlay-service.sh && \
-    install -m755 /ctx/nix.sh /tmp/nix.sh && \
-    install -m755 /ctx/system-config.sh /tmp/system-config.sh && \
-    install -m755 /ctx/custom.sh /tmp/custom.sh && \
-    install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
-    install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
-    install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh && \
-    sh /tmp/rpms.sh && \
-    sh /tmp/flatpak.sh && \
-    sh /tmp/nix-overlay-service.sh && \
-    sh /tmp/nix.sh && \
-    sh /tmp/system-config.sh && \
-    sh /tmp/services.sh && \
-    sh /tmp/custom.sh
+    /bin/sh -eux <<'EOF'
+install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
+install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
+install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
+
+for script in \
+  rpms.sh \
+  flatpak.sh \
+  nix-overlay-service.sh \
+  nix.sh \
+  system-config.sh \
+  services.sh \
+  custom.sh
+do
+  install -m755 "/ctx/$script" "/tmp/$script"
+done
+
+/tmp/rpms.sh
+/tmp/flatpak.sh
+/tmp/nix-overlay-service.sh
+/tmp/nix.sh
+/tmp/system-config.sh
+/tmp/services.sh
+/tmp/custom.sh
+
+rm -rf /tmp/*
+EOF
 
 # -----------------------------------------------------------------------------
 # Final selection

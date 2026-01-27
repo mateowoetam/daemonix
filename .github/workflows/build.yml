@@ -24,9 +24,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
+# =====================================================================
+# BASE IMAGE
+# =====================================================================
 jobs:
-  build_push:
-    name: Build and push images
+  build_base:
+    name: Build & push base image
     runs-on: ubuntu-24.04
 
     permissions:
@@ -60,9 +63,6 @@ jobs:
         run: |
           echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
-      # ------------------------------------------------------------------
-      # Base image
-      # ------------------------------------------------------------------
       - name: Build base image
         uses: redhat-actions/buildah-build@v2
         with:
@@ -82,9 +82,74 @@ jobs:
             io.artifacthub.package.keywords=${{ env.IMAGE_KEYWORDS }}
             io.artifacthub.package.logo-url=${{ env.IMAGE_LOGO_URL }}
 
-      # ------------------------------------------------------------------
-      # NVIDIA image
-      # ------------------------------------------------------------------
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push base image
+        if: github.event_name != 'pull_request'
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          registry: ghcr.io
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ env.DEFAULT_TAG }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------
+      # CLEANUP (IMPORTANT)
+      # -------------------------
+      - name: Cleanup base image
+        if: always()
+        run: |
+          buildah rmi -f ${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }} || true
+          buildah rm -a || true
+          buildah rmi -a || true
+          buildah prune -f || true
+
+# =====================================================================
+# NVIDIA IMAGE
+# =====================================================================
+  build_nvidia:
+    name: Build & push nvidia image
+    runs-on: ubuntu-24.04
+    needs: build_base
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Prepare environment
+        run: |
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e
+        with:
+          remove-codeql: true
+
+      - name: Mount BTRFS for podman storage
+        uses: ublue-os/container-storage-action@911baca08baf30c8654933e9e9723cb399892140
+        continue-on-error: true
+        with:
+          target-dir: /var/lib/containers
+          mount-opts: compress-force=zstd:2
+
+      - name: Get current date
+        id: date
+        run: |
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build nvidia image
         uses: redhat-actions/buildah-build@v2
         with:
@@ -112,16 +177,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push base image
-        if: github.event_name != 'pull_request'
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          registry: ghcr.io
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.DEFAULT_TAG }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Push nvidia image
         if: github.event_name != 'pull_request'
         uses: redhat-actions/push-to-registry@v2
@@ -131,3 +186,14 @@ jobs:
           tags: ${{ env.DEFAULT_TAG }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------
+      # CLEANUP (IMPORTANT)
+      # -------------------------
+      - name: Cleanup nvidia image
+        if: always()
+        run: |
+          buildah rmi -f ${{ env.IMAGE_NAME }}-nvidia:${{ env.DEFAULT_TAG }} || true
+          buildah rm -a || true
+          buildah rmi -a || true
+          buildah prune -f || true
