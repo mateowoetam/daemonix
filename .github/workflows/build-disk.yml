@@ -1,4 +1,3 @@
----
 name: Build disk images
 
 on:
@@ -10,7 +9,9 @@ on:
         default: false
         type: boolean
       platform:
+        description: "Target Platform"
         required: true
+        default: "amd64"
         type: choice
         options:
           - amd64
@@ -19,14 +20,14 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - './disk_config/disk.toml'
-      - './disk_config/iso.toml'
-      - './.github/workflows/build-disk.yml'
+      - 'disk_config/**'
+      - '.github/workflows/build-disk.yml'
 
 env:
   IMAGE_NAME: ${{ github.event.repository.name }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DEFAULT_TAG: latest
+  # Using the official upstream BIB or your preferred mirror
   BIB_IMAGE: ghcr.io/lorbuschris/bootc-image-builder:20250608
 
 concurrency:
@@ -36,13 +37,15 @@ concurrency:
 jobs:
   build:
     name: Build disk images
-    runs-on: ${{ inputs.platform == 'amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    # Select runner based on platform input
+    runs-on: ${{ github.event.inputs.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
     strategy:
       fail-fast: false
       matrix:
         disk-type: [qcow2, anaconda-iso]
-        image-variant: [base, nvidia]
+        # These match the VARIANT names from your Containerfile logic
+        image-variant: [main, nvidia]
 
     permissions:
       contents: read
@@ -50,57 +53,55 @@ jobs:
       id-token: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+
       - name: Prepare environment
         shell: bash
         run: |
+          # Lowercase the registry and name for standard OCI compatibility
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
-          echo "IMAGE_VARIANT=${{ matrix.image-variant }}" >> "$GITHUB_ENV"
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
           echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
 
-      - name: Install dependencies (ARM)
-        if: inputs.platform == 'arm64'
-        shell: bash
-        run: |
-          sudo apt update -y
-          sudo apt install -y podman
-
       - name: Maximize build space
-        if: inputs.platform != 'arm64'
-        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+        if: github.event.inputs.platform != 'arm64'
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e
         with:
           remove-codeql: true
 
-      - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v5
+      - name: Log into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build disk image (${{ matrix.image-variant }})
         id: build
         uses: osbuild/bootc-image-builder-action@main
         with:
           builder-image: ${{ env.BIB_IMAGE }}
+          # Points to your config files
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          image: >-
-            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}${{
-              matrix.image-variant == 'nvidia' && '-nvidia' || ''
-            }}:${{ env.DEFAULT_TAG }}
+          # Constructs the image reference: e.g., ghcr.io/user/daemonix-nvidia:latest
+          image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
-          additional-args: --use-librepo=True
+          # Essential for nested container builds
+          privileged: true
 
-      - name: Upload disk images and checksums
-        if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4
+      - name: Upload disk images
+        if: github.event.inputs.upload-to-s3 != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
+          name: ${{ matrix.image-variant }}-${{ matrix.disk-type }}-${{ github.event.inputs.platform }}
           path: ${{ steps.build.outputs.output-directory }}
-          if-no-files-found: error
-          retention-days: 0
-          compression-level: 0
-          overwrite: true
+          retention-days: 5
 
       - name: Upload to S3
-        if: inputs.upload-to-s3 == true && github.event_name != 'pull_request'
+        if: github.event.inputs.upload-to-s3 == 'true' && github.event_name != 'pull_request'
         shell: bash
         env:
           RCLONE_CONFIG_S3_TYPE: s3
@@ -110,7 +111,22 @@ jobs:
           RCLONE_CONFIG_S3_REGION: ${{ secrets.S3_REGION }}
           RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y rclone
+          sudo apt-get update && sudo apt-get install -y rclone
           rclone copy "${{ steps.build.outputs.output-directory }}" \
-            "S3:${{ secrets.S3_BUCKET_NAME }}"
+            "S3:${{ secrets.S3_BUCKET_NAME }}/${{ matrix.image-variant }}/${{ github.run_id }}"
+
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@dc6b0e00735716ce949696804d99a6f7407301bc # v3.8.0
+
+      - name: Sign source container image
+        if: github.event_name != 'pull_request'
+        run: |
+          # Use the exact same image string used in the BIB build step
+          IMAGE_REF="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}"
+
+          echo "Signing $IMAGE_REF"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE_REF"
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
