@@ -24,35 +24,34 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/lib/dnf \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
-    /bin/sh -eux <<'EOF'
-mkdir -p /var/cache/dnf /var/lib/dnf
+    install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
+    install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
+    install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
 
-install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
-install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
-install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
-
+# Install scripts
 for script in \
-  rpms.sh \
-  flatpak.sh \
-  nix-overlay-service.sh \
-  nix.sh \
-  system-config.sh \
-  services.sh \
-  custom.sh
-do
-  install -m755 "/ctx/$script" "/tmp/$script"
+    rpms.sh \
+    flatpak.sh \
+    nix-overlay-service.sh \
+    nix.sh \
+    system-config.sh \
+    services.sh \
+    custom.sh; do
+    install -m755 "/ctx/$script" "/tmp/$script"
 done
 
-/tmp/rpms.sh
-/tmp/flatpak.sh
-/tmp/nix-overlay-service.sh
-/tmp/nix.sh
-/tmp/system-config.sh
-/tmp/services.sh
-/tmp/custom.sh
+# Execute scripts
+sh /tmp/rpms.sh
+sh /tmp/flatpak.sh
+sh /tmp/nix-overlay-service.sh
+sh /tmp/nix.sh
+sh /tmp/system-config.sh
+sh /tmp/services.sh
+sh /tmp/custom.sh
 
+# Clean up
 rm -rf /tmp/*
-EOF
+
 
 # -----------------------------------------------------------------------------
 # NVIDIA image
@@ -74,35 +73,34 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,target=/var/lib/dnf \
     --mount=type=cache,target=/var/log \
     --mount=type=tmpfs,target=/tmp \
-    /bin/sh -eux <<'EOF'
-mkdir -p /var/cache/dnf /var/lib/dnf
+    install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode && \
+    install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper && \
+    install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
 
-install -Dm755 /ctx/install-dev-flatpak.sh /usr/bin/dev-mode
-install -Dm755 /ctx/daemonix-helper.sh /usr/bin/daemonix-helper
-install -Dm755 /ctx/mount-nix-overlay.sh /usr/bin/mount-nix-overlay.sh
-
+# Install scripts
 for script in \
-  rpms.sh \
-  flatpak.sh \
-  nix-overlay-service.sh \
-  nix.sh \
-  system-config.sh \
-  services.sh \
-  custom.sh
-do
-  install -m755 "/ctx/$script" "/tmp/$script"
+    rpms.sh \
+    flatpak.sh \
+    nix-overlay-service.sh \
+    nix.sh \
+    system-config.sh \
+    services.sh \
+    custom.sh; do
+    install -m755 "/ctx/$script" "/tmp/$script"
 done
 
-/tmp/rpms.sh
-/tmp/flatpak.sh
-/tmp/nix-overlay-service.sh
-/tmp/nix.sh
-/tmp/system-config.sh
-/tmp/services.sh
-/tmp/custom.sh
+# Execute scripts
+sh /tmp/rpms.sh
+sh /tmp/flatpak.sh
+sh /tmp/nix-overlay-service.sh
+sh /tmp/nix.sh
+sh /tmp/system-config.sh
+sh /tmp/services.sh
+sh /tmp/custom.sh
 
+# Clean up
 rm -rf /tmp/*
-EOF
+
 
 # -----------------------------------------------------------------------------
 # Final selection
