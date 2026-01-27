@@ -34,10 +34,8 @@ dnf install --setopt=install_weak_deps=False -y \
 opendoas \
 dash \
 fish \
-distrobox \
 fastfetch \
 gamescope \
-gamemode \
 wine \
-alacritty \
+alacritty
 echo "RPM setup complete. Temporary repos cleaned up."
