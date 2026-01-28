@@ -117,7 +117,7 @@ jobs:
 
       - name: Install Cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@dc6b0e00735716ce949696804d99a6f7407301bc # v3.8.0
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad
 
       - name: Sign source container image
         if: github.event_name != 'pull_request'
