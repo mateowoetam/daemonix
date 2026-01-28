@@ -6,6 +6,7 @@ flatpak config --set languages '*'
 flatpak config --set locales '*'
 for app in \
 org.fkoehler.KTailctl \
+org.deskflow.deskflow \
 org.gnome.DejaDup \
 org.kde.haruna \
 org.mozilla.firefox;do

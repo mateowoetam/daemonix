@@ -42,8 +42,8 @@ jobs:
       fail-fast: false
       matrix:
         disk-type: [qcow2, anaconda-iso]
-        # This matches the tags: daemonix-main and daemonix-nvidia
-        image-variant: [main, nvidia]
+        # This handles both daemonix-base and daemonix-nvidia images
+        image-variant: [base, nvidia]
 
     permissions:
       contents: read
@@ -61,6 +61,8 @@ jobs:
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
           echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
+          # Define a fixed path for the auth file to ensure the builder finds it
+          echo "REGISTRY_AUTH_FILE=${{ github.workspace }}/auth.json" >> "$GITHUB_ENV"
 
       - name: Maximize build space
         if: github.event.inputs.platform != 'arm64'
@@ -74,6 +76,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          # This exports the login token to the file we defined in Prepare Environment
+          logout: false
 
       - name: Build disk image (${{ matrix.image-variant }})
         id: build
@@ -81,13 +85,12 @@ jobs:
         with:
           builder-image: ${{ env.BIB_IMAGE }}
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          # Logic: Pulls ghcr.io/user/daemonix-main:latest OR ghcr.io/user/daemonix-nvidia:latest
           image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
-          # The fix for the 403 Forbidden error:
+          # Use the environment variable we defined to avoid "Forbidden" errors
           additional-args: |
-            --authfile /run/user/1001/containers/auth.json
+            --authfile ${{ env.REGISTRY_AUTH_FILE }}
 
       - name: Install Cosign
         if: github.event_name != 'pull_request'
@@ -97,7 +100,6 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           IMAGE_REF="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}"
-          echo "Signing $IMAGE_REF"
           cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE_REF"
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
