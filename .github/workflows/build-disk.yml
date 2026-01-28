@@ -27,8 +27,7 @@ env:
   IMAGE_NAME: ${{ github.event.repository.name }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DEFAULT_TAG: latest
-  # Using the official upstream BIB or your preferred mirror
-  BIB_IMAGE: ghcr.io/lorbuschris/bootc-image-builder:20250608
+  BIB_IMAGE: quay.io/centos-bootc/bootc-image-builder:latest
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -37,29 +36,27 @@ concurrency:
 jobs:
   build:
     name: Build disk images
-    # Select runner based on platform input
     runs-on: ${{ github.event.inputs.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
     strategy:
       fail-fast: false
       matrix:
         disk-type: [qcow2, anaconda-iso]
-        # These match the VARIANT names from your Containerfile logic
+        # This matches the tags: daemonix-main and daemonix-nvidia
         image-variant: [main, nvidia]
 
     permissions:
       contents: read
-      packages: read
+      packages: write
       id-token: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+        uses: actions/checkout@v4
 
       - name: Prepare environment
         shell: bash
         run: |
-          # Lowercase the registry and name for standard OCI compatibility
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
@@ -67,7 +64,7 @@ jobs:
 
       - name: Maximize build space
         if: github.event.inputs.platform != 'arm64'
-        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           remove-codeql: true
 
@@ -83,18 +80,32 @@ jobs:
         uses: osbuild/bootc-image-builder-action@main
         with:
           builder-image: ${{ env.BIB_IMAGE }}
-          # Points to your config files
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          # Constructs the image reference: e.g., ghcr.io/user/daemonix-nvidia:latest
+          # Logic: Pulls ghcr.io/user/daemonix-main:latest OR ghcr.io/user/daemonix-nvidia:latest
           image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
-          # Essential for nested container builds
-          privileged: true
+          # The fix for the 403 Forbidden error:
+          additional-args: |
+            --authfile /run/user/1001/containers/auth.json
+
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.8.0
+
+      - name: Sign source container image
+        if: github.event_name != 'pull_request'
+        run: |
+          IMAGE_REF="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}"
+          echo "Signing $IMAGE_REF"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE_REF"
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
       - name: Upload disk images
         if: github.event.inputs.upload-to-s3 != 'true'
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.image-variant }}-${{ matrix.disk-type }}-${{ github.event.inputs.platform }}
           path: ${{ steps.build.outputs.output-directory }}
@@ -114,19 +125,3 @@ jobs:
           sudo apt-get update && sudo apt-get install -y rclone
           rclone copy "${{ steps.build.outputs.output-directory }}" \
             "S3:${{ secrets.S3_BUCKET_NAME }}/${{ matrix.image-variant }}/${{ github.run_id }}"
-
-      - name: Install Cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad
-
-      - name: Sign source container image
-        if: github.event_name != 'pull_request'
-        run: |
-          # Use the exact same image string used in the BIB build step
-          IMAGE_REF="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}"
-
-          echo "Signing $IMAGE_REF"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE_REF"
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
