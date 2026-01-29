@@ -42,7 +42,12 @@
 Rebase from any Fedora Atomic based distro :
 
 ```
-sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/mateowoetam/daemonix:latest
+sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/mateowoetam/daemonix-base:latest
+```
+
+For the Nvidia enable image run this:
+```
+sudo rpm-ostree rebase --experimental ostree-unverified-registry:ghcr.io/mateowoetam/daemonix-nvidia:latest
 ```
 
 To use any additionnal feature use : 

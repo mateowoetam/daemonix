@@ -16,7 +16,6 @@ on:
         options:
           - amd64
           - arm64
-
   pull_request:
     branches: [main]
     paths:
@@ -27,6 +26,7 @@ env:
   IMAGE_NAME: ${{ github.event.repository.name }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   DEFAULT_TAG: latest
+  # Note: BIB_IMAGE set to latest Centos-bootc or pinned Lorbuschris for BTRFS support
   BIB_IMAGE: quay.io/centos-bootc/bootc-image-builder:latest
 
 concurrency:
@@ -36,13 +36,13 @@ concurrency:
 jobs:
   build:
     name: Build disk images
-    runs-on: ${{ github.event.inputs.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    # Use inputs context for manual dispatch, fallback to amd64 for PRs
+    runs-on: ${{ inputs.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
     strategy:
       fail-fast: false
       matrix:
         disk-type: [qcow2, anaconda-iso]
-        # This handles both daemonix-base and daemonix-nvidia images
         image-variant: [base, nvidia]
 
     permissions:
@@ -57,18 +57,26 @@ jobs:
       - name: Prepare environment
         shell: bash
         run: |
+          # Logic: if variant is 'base', name is just the repo. Otherwise, repo-variant.
+          if [ "${{ matrix.image-variant }}" = "base" ]; then
+            FULL_NAME="${{ env.IMAGE_NAME }}"
+          else
+            FULL_NAME="${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}"
+          fi
+
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
+          # This variable now holds the resolved name (daemonix or daemonix-nvidia)
+          echo "RESOLVED_IMAGE_NAME=${FULL_NAME,,}" >> "$GITHUB_ENV"
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
           echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
-          # Define a fixed path for the auth file to ensure the builder finds it
           echo "REGISTRY_AUTH_FILE=${{ github.workspace }}/auth.json" >> "$GITHUB_ENV"
 
       - name: Maximize build space
-        if: github.event.inputs.platform != 'arm64'
+        if: inputs.platform != 'arm64'
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           remove-codeql: true
+          remove-docker-images: true
 
       - name: Log into GHCR
         uses: docker/login-action@v3
@@ -76,7 +84,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          # This exports the login token to the file we defined in Prepare Environment
           logout: false
 
       - name: Build disk image (${{ matrix.image-variant }})
@@ -85,36 +92,24 @@ jobs:
         with:
           builder-image: ${{ env.BIB_IMAGE }}
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}
+          # Use the RESOLVED_IMAGE_NAME we just calculated
+          image: ${{ env.IMAGE_REGISTRY }}/${{ env.RESOLVED_IMAGE_NAME }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
-          # Use the environment variable we defined to avoid "Forbidden" errors
-          additional-args: |
-            --authfile ${{ env.REGISTRY_AUTH_FILE }}
-
-      - name: Install Cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3.8.0
-
-      - name: Sign source container image
-        if: github.event_name != 'pull_request'
-        run: |
-          IMAGE_REF="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}:${{ env.DEFAULT_TAG }}"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE_REF"
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          additional-args: --authfile ${{ env.REGISTRY_AUTH_FILE }} --use-librepo=True
 
       - name: Upload disk images
-        if: github.event.inputs.upload-to-s3 != 'true'
+        # Only upload as artifact if not uploading to S3
+        if: inputs.upload-to-s3 != true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.image-variant }}-${{ matrix.disk-type }}-${{ github.event.inputs.platform }}
+          name: ${{ matrix.image-variant }}-${{ matrix.disk-type }}-${{ inputs.platform || 'amd64' }}
           path: ${{ steps.build.outputs.output-directory }}
           retention-days: 5
+          if-no-files-found: error
 
       - name: Upload to S3
-        if: github.event.inputs.upload-to-s3 == 'true' && github.event_name != 'pull_request'
+        if: inputs.upload-to-s3 == true && github.event_name != 'pull_request'
         shell: bash
         env:
           RCLONE_CONFIG_S3_TYPE: s3
@@ -125,5 +120,6 @@ jobs:
           RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
+          # Organize S3 by variant and run ID for clarity
           rclone copy "${{ steps.build.outputs.output-directory }}" \
             "S3:${{ secrets.S3_BUCKET_NAME }}/${{ matrix.image-variant }}/${{ github.run_id }}"

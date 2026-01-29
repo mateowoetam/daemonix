@@ -79,10 +79,11 @@ sudoif command *args:
 build-base:
     #!/usr/bin/env bash
     set -euo pipefail
-
     podman build \
         --pull=newer \
-        --build-arg BUILD_FLAVOR=base \
+        --build-arg BASE_IMAGE={{ base_kinoite }} \
+        --build-arg VARIANT=base \
+        --build-arg IMAGE_NAME={{ image_name }} \
         -f Containerfile \
         -t {{ image_name }}:{{ default_tag }} \
         .
@@ -91,10 +92,11 @@ build-base:
 build-nvidia:
     #!/usr/bin/env bash
     set -euo pipefail
-
     podman build \
         --pull=newer \
-        --build-arg BUILD_FLAVOR=nvidia \
+        --build-arg BASE_IMAGE={{ nvidia_kinoite }} \
+        --build-arg VARIANT=nvidia \
+        --build-arg IMAGE_NAME={{ image_name }}-nvidia \
         -f Containerfile \
         -t {{ image_name }}-nvidia:{{ default_tag }} \
         .
@@ -175,6 +177,8 @@ build-iso:
 build-iso-nvidia:
     just build-nvidia
     just _build-bib "localhost/{{ image_name }}-nvidia" {{ default_tag }} iso disk_config/iso.toml
+
+# ... (Apply the same pattern to build-qcow2 and build-raw)
 
 # -----------------------------------------------------------------------------
 # QCOW / RAW Builds (Base)
