@@ -1,3 +1,4 @@
+---
 name: Build disk images
 
 on:
@@ -9,25 +10,24 @@ on:
         default: false
         type: boolean
       platform:
-        description: "Target Platform"
         required: true
-        default: "amd64"
         type: choice
+        default: "amd64"
         options:
           - amd64
           - arm64
   pull_request:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'disk_config/**'
       - '.github/workflows/build-disk.yml'
 
 env:
   IMAGE_NAME: ${{ github.event.repository.name }}
-  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  DEFAULT_TAG: latest
-  # Note: BIB_IMAGE set to latest Centos-bootc or pinned Lorbuschris for BTRFS support
-  BIB_IMAGE: quay.io/centos-bootc/bootc-image-builder:latest
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+  DEFAULT_TAG: "latest"
+  BIB_IMAGE: "quay.io/centos-bootc/bootc-image-builder:latest"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -36,47 +36,58 @@ concurrency:
 jobs:
   build:
     name: Build disk images
-    # Use inputs context for manual dispatch, fallback to amd64 for PRs
     runs-on: ${{ inputs.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
-
     strategy:
       fail-fast: false
       matrix:
-        disk-type: [qcow2, anaconda-iso]
-        image-variant: [base, nvidia]
+        disk-type: ["qcow2", "anaconda-iso"]
+        image-variant: ["base", "nvidia"]
 
     permissions:
       contents: read
-      packages: write
+      packages: read
       id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Prepare environment
-        shell: bash
         run: |
-          # Logic: if variant is 'base', name is just the repo. Otherwise, repo-variant.
+          # 1. Resolve Image Name (base vs variant)
           if [ "${{ matrix.image-variant }}" = "base" ]; then
-            FULL_NAME="${{ env.IMAGE_NAME }}"
+            RESOLVED_NAME="${{ env.IMAGE_NAME }}"
           else
-            FULL_NAME="${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}"
+            RESOLVED_NAME="${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}"
+          fi
+
+          # 2. Resolve Disk Type (e.g., qcow2 vs anaconda-iso)
+          # We use this to make the artifact names cleaner
+          DISK_TYPE="${{ matrix.disk-type }}"
+
+          # 3. Resolve Architecture
+          # Use the input platform if manual, otherwise detect via uname
+          ARCH="${{ inputs.platform }}"
+          if [ -z "$ARCH" ]; then
+            ARCH=$(uname -m)
+            # Normalize arm64/aarch64 naming
+            [ "$ARCH" = "aarch64" ] && ARCH="arm64"
+            [ "$ARCH" = "x86_64" ] && ARCH="amd64"
           fi
 
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
-          # This variable now holds the resolved name (daemonix or daemonix-nvidia)
-          echo "RESOLVED_IMAGE_NAME=${FULL_NAME,,}" >> "$GITHUB_ENV"
+          echo "RESOLVED_IMAGE_NAME=${RESOLVED_NAME,,}" >> "$GITHUB_ENV"
+          echo "DISK_TYPE=${DISK_TYPE}" >> "$GITHUB_ENV"
+          echo "ARCH=${ARCH}" >> "$GITHUB_ENV"
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
           echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
           echo "REGISTRY_AUTH_FILE=${{ github.workspace }}/auth.json" >> "$GITHUB_ENV"
 
       - name: Maximize build space
         if: inputs.platform != 'arm64'
-        uses: jlumbroso/free-disk-space@v1.3.1
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
         with:
           remove-codeql: true
-          remove-docker-images: true
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Log into GHCR
         uses: docker/login-action@v3
@@ -86,27 +97,29 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
 
-      - name: Build disk image (${{ matrix.image-variant }})
+      - name: Build disk images
         id: build
         uses: osbuild/bootc-image-builder-action@main
         with:
           builder-image: ${{ env.BIB_IMAGE }}
           config-file: ${{ matrix.disk-type == 'anaconda-iso' && './disk_config/iso.toml' || './disk_config/disk.toml' }}
-          # Use the RESOLVED_IMAGE_NAME we just calculated
           image: ${{ env.IMAGE_REGISTRY }}/${{ env.RESOLVED_IMAGE_NAME }}:${{ env.DEFAULT_TAG }}
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: ${{ matrix.disk-type }}
-          additional-args: --authfile ${{ env.REGISTRY_AUTH_FILE }} --use-librepo=True
+          additional-args: |
+            --use-librepo=True
+            --authfile ${{ env.REGISTRY_AUTH_FILE }}
 
-      - name: Upload disk images
-        # Only upload as artifact if not uploading to S3
-        if: inputs.upload-to-s3 != true
-        uses: actions/upload-artifact@v4
+      - name: Upload disk images and Checksum to Job Artifacts
+        if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ${{ matrix.image-variant }}-${{ matrix.disk-type }}-${{ inputs.platform || 'amd64' }}
           path: ${{ steps.build.outputs.output-directory }}
-          retention-days: 5
           if-no-files-found: error
+          retention-days: 0
+          compression-level: 0
+          overwrite: true
 
       - name: Upload to S3
         if: inputs.upload-to-s3 == true && github.event_name != 'pull_request'
@@ -118,8 +131,7 @@ jobs:
           RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           RCLONE_CONFIG_S3_REGION: ${{ secrets.S3_REGION }}
           RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          SOURCE_DIR: ${{ steps.build.outputs.output-directory }}
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
-          # Organize S3 by variant and run ID for clarity
-          rclone copy "${{ steps.build.outputs.output-directory }}" \
-            "S3:${{ secrets.S3_BUCKET_NAME }}/${{ matrix.image-variant }}/${{ github.run_id }}"
+          rclone copy $SOURCE_DIR S3:${{ secrets.S3_BUCKET_NAME }}/${{ matrix.image-variant }}/${{ github.run_id }}
