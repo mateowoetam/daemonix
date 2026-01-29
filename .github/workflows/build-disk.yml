@@ -122,6 +122,7 @@ jobs:
           types: ${{ matrix.disk-type }}
           additional-args: |
             --use-librepo=True
+            --authfile ${{ env.REGISTRY_AUTH_FILE }}
 
       - name: Upload disk images and Checksum to Job Artifacts
         if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
