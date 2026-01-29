@@ -51,34 +51,48 @@ jobs:
     steps:
       - name: Prepare environment
         run: |
-          # 1. Resolve Image Name (base vs variant)
+          # 1. Resolve Image Name logic
+          # If variant is base, use the repo name (daemonix).
+          # Otherwise, append the variant (daemonix-nvidia).
           if [ "${{ matrix.image-variant }}" = "base" ]; then
             RESOLVED_NAME="${{ env.IMAGE_NAME }}"
           else
             RESOLVED_NAME="${{ env.IMAGE_NAME }}-${{ matrix.image-variant }}"
           fi
 
-          # 2. Resolve Disk Type (e.g., qcow2 vs anaconda-iso)
-          # We use this to make the artifact names cleaner
-          DISK_TYPE="${{ matrix.disk-type }}"
+          # 2. Resolve Disk Type and format it (replacing spaces with hyphens)
+          DISK_TYPE=$(echo "${{ matrix.disk-type }}" | tr ' ' '-')
 
-          # 3. Resolve Architecture
-          # Use the input platform if manual, otherwise detect via uname
+          # 3. Resolve Architecture (Manual input or Auto-detect)
           ARCH="${{ inputs.platform }}"
           if [ -z "$ARCH" ]; then
             ARCH=$(uname -m)
-            # Normalize arm64/aarch64 naming
             [ "$ARCH" = "aarch64" ] && ARCH="arm64"
             [ "$ARCH" = "x86_64" ] && ARCH="amd64"
           fi
 
+          # 4. Export to GITHUB_ENV
+          # Lowercase registry and names for compatibility with GHCR
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> "$GITHUB_ENV"
           echo "RESOLVED_IMAGE_NAME=${RESOLVED_NAME,,}" >> "$GITHUB_ENV"
+
           echo "DISK_TYPE=${DISK_TYPE}" >> "$GITHUB_ENV"
           echo "ARCH=${ARCH}" >> "$GITHUB_ENV"
+
           echo "USER_UID=$(id -u)" >> "$GITHUB_ENV"
           echo "USER_GID=$(id -g)" >> "$GITHUB_ENV"
+
+          # Path for the auth file used by bootc-image-builder
           echo "REGISTRY_AUTH_FILE=${{ github.workspace }}/auth.json" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        if: inputs.platform == 'arm64'
+        run: |
+          set -x
+          sudo apt update -y
+          sudo apt install -y \
+            podman
 
       - name: Maximize build space
         if: inputs.platform != 'arm64'
